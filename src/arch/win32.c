@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <winbase.h>
 
+/*	TODO:	odzkouset	*/
 
 void (*timer_callback)(void);
 

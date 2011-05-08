@@ -1,2 +1,15 @@
 ;timer test
-mov	r7, #
+mov	r7, #0FFh
+mov	th0, r7
+
+mov	r7, #0F0h
+mov	tl0, r7
+
+mov	r7, #1
+mov	tmod, r7
+
+mov	r7, #10h
+mov	tcon, r7
+
+sjmp $
+

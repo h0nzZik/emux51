@@ -7,11 +7,12 @@
 #define REG(x) ((x)|(data_memory[(data_memory[*PSW]&0x18)]))
 
 
-/*	TODO: dodelat a overit MOVy	*/
+/*	TODO: a lot of instructions ;-P	*/
 
 
 void mov_rx_imm8(unsigned short idx)
 {
+	printf("mov r%d, #0x%2x\n", (*PSW&0x18)|(code_memory[idx]&0x07), code_memory[idx+1]);
 	data_memory[(*PSW&0x18)|(code_memory[idx]&0x07)]=
 		code_memory[idx+1];
 	PC+=2;

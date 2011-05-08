@@ -1,14 +1,12 @@
 # Makefile
 
-
-CFLAGS=-Wall -pedantic -O2
+CFLAGS=-Wall -pedantic -O2 -ggdb3
 targets=instructions emux51
 objects=obj/instructions.o obj/emux51.o obj/arch.o
 
 .PHONY: clean main
 
 build: ${targets}
-	echo building..
 	${CC} ${objects} -o bin/emux51
 ${targets}:
 	make --makefile=src/Makefile CFLAGS="${CFLAGS}" arch

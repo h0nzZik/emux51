@@ -6,8 +6,8 @@
 #include <instructions.h>
 #include <arch/arch.h>
 
-#define MACHINE_FREQ_DEFAULT 1000000
-#define SYNC_FREQ_DEFAULT 100
+#define MACHINE_FREQ_DEFAULT 1
+#define SYNC_FREQ_DEFAULT 1
 
 
 
@@ -188,6 +188,7 @@ void init_machine(void)
 static inline void update_timer_0(void)
 {
 /*	increment TH0/TL0 if inc	*/
+	printf("updating timer 0\n");
 	(*TL0)++;
 	if(timer_0_mode == 0)
 		*TL0&=0x1f;
@@ -198,6 +199,7 @@ static inline void update_timer_0(void)
 }
 static inline void update_timer_1(void)
 {
+	printf("updating timer 1\n");
 	(*TL1)++;
 	if(timer_1_mode == 0)
 		*TL1&=0x1f;
@@ -230,12 +232,15 @@ static inline void update_ports(void)
 
 /*	FIXME: ET0 etc..	*/
 
+/*	FIXME: interrupt requests	*/
 static inline void set_irqs(void)
 {
+	#if 0
 	/*	sets IE0 if request		*/
 	*TCON|=(*P3>>1)&0x02;
 	/*	sets IE1 if request		*/
 	*TCON|=*P2&0x08;
+	#endif
 
 }
 
@@ -266,6 +271,8 @@ int do_few_instructions(int cnt)
 		opcodes[code_memory[PC]].f(PC);
 		do_every_instruction_stuff(decrement);
 		cnt-=decrement;
+		dump();
+
 	}
 	return cnt;
 }
@@ -304,6 +311,7 @@ int main(int argc, char *argv[])
 
 	init_instructions();
 	init_machine();
+	update_ports();
 	if (load_hex(argv[1], code_memory, 64*1024)) {
 		fprintf(stderr, "cannot open file\n");
 		return 1;
