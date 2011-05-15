@@ -23,5 +23,5 @@ extern unsigned char *SP;
 extern unsigned char *PSW;
 
 extern unsigned char *Acc;
-
+extern unsigned char port_collectors[4];
 #endif
