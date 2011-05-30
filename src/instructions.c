@@ -3,55 +3,224 @@
 #include <instructions.h>
 #include <emux51.h>
 
+/*			notes:
+ *	SJMP and instructions like that:
+ *	*	destination adress = PC + _sizeof(current)_ + (signed)relative 
+ */
 
-#define REG(x) ((x)|(data_memory[(data_memory[*PSW]&0x18)]))
+
+/*	TODO: check instruction times	*/
 
 
 /*	TODO: a lot of instructions ;-P	*/
 
 
+
+
+
+/*		<mov instructions>		*/
 void mov_rx_imm8(unsigned short idx)
 {
-	printf("mov r%d, #0x%2x\n", (*PSW&0x18)|(code_memory[idx]&0x07), code_memory[idx+1]);
-	data_memory[(*PSW&0x18)|(code_memory[idx]&0x07)]=
-		code_memory[idx+1];
+	unsigned char data;
+	int reg;
+
+	data=read_code(idx+1);
+	reg=read_code(idx)&0x07;
+	write_register(reg, data);
 	PC+=2;
-
 }
-
-
-
 void mov_rx_addr(unsigned short idx)
 {
-/*	printf("mov rx, addr, base at 0x%x\n", (*PSW&0x18));*/
-	data_memory[(*PSW&0x18)|(code_memory[idx]&0x07)]=
-		data_memory[code_memory[idx+1]];
+	int reg;
+	unsigned char data;
+
+	reg=read_code(idx)&0x07;
+	data=read_data(read_code(idx+1));
+	write_register(reg, data);
 	PC+=2;
 }
-
-
 void mov_addr_rx(unsigned short idx)
 {
-	data_memory[code_memory[idx+1]]=
-		data_memory[(*PSW&0x18)|(code_memory[idx]&0x07)];
+	unsigned char data;
+	unsigned addr;
 
-/*	data_memory[code_memory[idx+1]]=REG(code_memory[idx]&0x07);*/
-
+	data=read_register(read_code(idx)&0x07);
+	addr=read_code(idx+1);
+	write_data(addr, data);
 	PC+=2;
 }
-
-
 void mov_a_rx(unsigned short idx)
 {
-	*Acc=data_memory[(*PSW&0x18)|(code_memory[idx]&0x07)];
+	unsigned char data;
+
+	data=read_register(read_code(idx)&0x07);
+	write_Acc(data);
 	PC++;
 }
-
 void mov_rx_a(unsigned short idx)
 {
-	data_memory[(*PSW&0x18)|(code_memory[idx]&0x07)]=*Acc;
+	int reg;
+	unsigned char data;
+
+	reg=read_code(idx)&0x07;
+	data=read_Acc();
+	write_register(reg, data);
 	PC++;
 }
+/*		</mov instructions>		*/
+
+
+/*		<byte conditional jumps>		*/
+void djnz_rx_addr(unsigned short idx)
+{
+	int reg;
+	signed char addr;
+	unsigned char rdata;
+
+	reg=read_code(idx)&0x07;
+	addr=read_code(idx+1);
+	rdata=read_register(reg);
+	rdata--;
+	write_register(reg, rdata);
+
+/*	printf ("djnz:\t");*/
+
+	PC+=2;
+	if (rdata) {
+		PC+=addr;
+	}
+	
+}
+void jz(unsigned int idx)
+{
+	signed char inc;
+
+	inc=read_code(idx+1);
+	PC+=2;
+	if(!read_Acc()){
+		PC+=inc;
+	}
+}
+void jnz(unsigned int idx)
+{
+	signed char inc;
+
+	inc=read_code(idx+1);
+	PC+=2;
+	if(read_Acc()){
+		PC+=inc;
+	}
+}
+/*		</byte conditional jumps>		*/
+
+
+/*		<setb instructions>		*/
+void setb_addr(unsigned short idx)
+{
+	set_bit(read_code(idx+1));
+	PC+=2;
+}
+void setb_c(unsigned short idx)
+{
+	clr_bit(CARRY);
+	PC++;
+}
+/*		</setb instructions>		*/
+
+/*		<clr instructions>		*/
+void clr_addr(unsigned short idx)
+{
+/*	printf("clr bit=%d\n", read_code(idx+1));*/
+	clr_bit(read_code(idx+1));
+	PC+=2;
+}
+void clr_c(unsigned short idx)
+{
+	clr_bit(CARRY);
+	PC++;
+}
+void clr_a(unsigned short idx)
+{
+	write_Acc(0);
+	PC++;
+}
+/*		</clr instructions>		*/
+
+/*		<bit conditional jumps>		*/
+void jb(unsigned short idx)
+{
+
+	signed char inc;
+	unsigned char addr;
+
+	inc=read_code(idx+2);
+	addr=read_code(idx+1);
+	PC+=3;
+
+	if(test_bit(addr)){
+		PC+=inc;
+	}
+}
+void jbc(unsigned short idx)
+{
+	signed char inc;
+	unsigned char addr;
+
+	inc=read_code(idx+2);
+	addr=read_code(idx+1);
+	PC+=3;
+
+	if(test_bit(addr)){
+		PC+=inc;
+		clr_bit(addr);
+	}
+}
+
+
+void jnb(unsigned short idx)
+{
+	signed char inc;
+	unsigned char addr;
+
+	addr=read_code(idx+1);
+	inc=read_code(idx+2);
+
+/*	printf("jnb bit=%d\n", addr);*/
+
+	PC+=3;
+	if(!test_bit(addr)){
+/*		printf("nerovna se, skacu\n");*/
+		PC+=inc;
+	} /*else printf("rovna se, jedu dal\n");*/
+}
+void jc(unsigned short idx)
+{
+	signed char inc;
+
+	inc=read_code(idx+1);
+	PC+=2;
+
+	if(test_bit(CARRY)){
+		PC+=inc;
+	}
+
+}
+void jnc(unsigned short idx)
+{
+	signed char inc;
+
+	inc=read_code(idx+1);
+	PC+=2;
+
+	if(!test_bit(CARRY)){
+		PC+=inc;
+	}
+
+}
+/*	</bit conditional jumps>	*/
+
+
+
 
 void ljmp(unsigned short idx)
 {
@@ -65,7 +234,9 @@ void ajmp(unsigned short idx)
 void sjmp(unsigned short idx)
 {
 	/*	hey! add 2 before offset addition!	*/
-	PC=2+idx+(signed char)code_memory[idx+1];
+	PC+=2;
+	PC+=(signed char)code_memory[idx+1];
+	printf("sjmp to %d\n", PC);
 }
 
 
@@ -128,6 +299,7 @@ void empty(unsigned short idx)
 
 void init_mov_instructions(void)
 {
+	int i;
 	/*	mov a, rx	*/
 	opcodes[0xE8].f=mov_a_rx;
 	opcodes[0xE8].time=1;
@@ -154,10 +326,10 @@ void init_mov_instructions(void)
 	opcodes[0xAF]=opcodes[0xAE]=opcodes[0xAD]=opcodes[0xA8];
 
 	/*	mov rx, #imm8	*/
-	opcodes[0x78].f=mov_rx_imm8;
-	opcodes[0x78].time=1;
-	opcodes[0x7C]=opcodes[0x7B]=opcodes[0x7A]=opcodes[0x79]=opcodes[0x78];
-	opcodes[0x7F]=opcodes[0x7E]=opcodes[0x78];
+	for (i=0x78; i<=0x7F; i++) {
+		opcodes[i].f=mov_rx_imm8;
+		opcodes[i].time=1;
+	}
 }
 
 
@@ -189,6 +361,7 @@ void init_stack_instructions(void)
 
 void init_jump_instructions(void)
 {
+	int i;
 	/*	sjmp	*/
 	opcodes[0x80].f=sjmp;
 	opcodes[0x80].time=2;
@@ -202,6 +375,53 @@ void init_jump_instructions(void)
 	/*	ljmp	*/
 	opcodes[0x02].f=ljmp;
 	opcodes[0x02].time=2;
+
+
+	/*	djnz	*/
+	for (i=0xD8; i<=0xDF; i++) {
+		opcodes[i].f=djnz_rx_addr;
+		opcodes[i].time=2;
+	}
+
+}
+
+
+void init_setb(void)
+{
+	/*	setb addr	*/
+	opcodes[0xD2].f=setb_addr;
+	opcodes[0xD2].time=1;
+	/*	setb c		*/
+	opcodes[0xD3].f=setb_c;
+	opcodes[0xD3].time=1;
+}
+
+void init_clr(void)
+{
+	/*	clr addr	*/
+	opcodes[0xC2].f=clr_addr;
+	opcodes[0xC2].time=1;
+	/*	clr c		*/
+	opcodes[0xC3].f=clr_c;
+	opcodes[0xC3].time=1;
+	/*	clr a		*/
+	opcodes[0xE4].f=clr_a;
+	opcodes[0xE4].time=1;
+
+}
+
+void init_bit_cond_jumps(void)
+{
+	/*	jbc	*/
+	opcodes[0x10].f=jbc;
+	opcodes[0x10].time=1;
+	/*	jb	*/
+	opcodes[0x20].f=jb;
+	opcodes[0x20].time=1;
+	/*	jnb	*/
+	opcodes[0x30].f=jnb;
+	opcodes[0x30].time=1;
+
 
 }
 
@@ -231,5 +451,8 @@ void init_instructions(void)
 	init_stack_instructions();
 	init_call_instructions();
 	init_mov_instructions();
+	init_clr();
+	init_setb();
+	init_bit_cond_jumps();
 }
 
