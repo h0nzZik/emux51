@@ -1,1 +1,21 @@
-Welcome to emux51, (in near future) modular 8051 emulator.
+Welcome to emux51, the modular 8051 emulator.
+
+		Priorities:
+*	modularity
+*	portability
+*	simplicity
+
+
+		Destination platforms:
+*	At first, I want to use this under standard Linux distributions.
+*	At second, some people wants to use this under standard Windows.
+*	At third, I would be happy if this will be able to run
+	on any Posix compatabile operation system.
+
+
+		Status:
+*	
+*	Timers are broken now.
+
+		TODO:
+*	Fix timers.
