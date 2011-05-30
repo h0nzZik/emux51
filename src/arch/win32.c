@@ -1,7 +1,7 @@
 #include <windows.h>
 #include <winbase.h>
 
-/*	TODO:	odzkouset	*/
+/*	TODO:	init architecture (WSA and so)	*/
 
 void (*timer_callback)(void);
 
