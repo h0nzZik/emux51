@@ -14,8 +14,14 @@ Welcome to emux51, the modular 8051 emulator.
 
 
 		Status:
-*	
+*	Module interface is done.
+*	Indirect memory access.
+*	Basic instructions are ok.
 *	Timers are broken now.
 
 		TODO:
 *	Fix timers.
+*	Do interrupts.
+*	Do a lot of instructions.
+*	Split architecture dependent code / only windows code into separated file.
+
