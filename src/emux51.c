@@ -1,41 +1,63 @@
+/*
+ *	Chyba: z nejakeho duvodu se nastavi mod 2 misto modu 1.
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <limits.h>
 
 #include <emux51.h>
 #include <instructions.h>
 #include <module.h>
-#include <arch/arch.h>
+#include <arch.h>
+#include <hex.h>
+#include <gui.h>
+
+#define FORCE_READ 0
+
+#define BUFFSZ 80
+
 /*			TODO:			*/
 /*	timers stuff, I have only T0 at mod1	*/
 /*						*/
 
+int running=0;
+int loaded=0;
+char hexfile[PATH_MAX];
+int interrupt_state=0;
+
+FILE *async;
+
 
 /*	64K  code memory		*/
 unsigned char code_memory[CODE_LENGHT];
+
 /*	256B data memory	*/
 unsigned char data_memory[DATA_LENGHT];
+
 unsigned short PC;
 
-unsigned char *SP=&data_memory[0x81];
-
+/*	FIXME: remove	*/
 unsigned short *DPTR=(void *)(&data_memory[0x82]);
 
 
-
+/*	some port variables	*/
 unsigned char port_latches[PORTS_CNT];
 unsigned char port_collectors[PORTS_CNT];
 unsigned char port_fall[PORTS_CNT];
 
+/*	machine cycles counter	*/
 unsigned long counter=0;
 
-#define FORCE_READ 0
 
-opcode_t opcodes[256];
-
-
+/*	frequency variables	*/
 double machine_freq;
 double sync_freq;
+
+
 
 int isport(unsigned addr)
 {
@@ -58,6 +80,7 @@ int addr_to_port(unsigned addr)
 	return(addr%PORTS_CNT);
 }
 
+
 /*		<API for module.c>		*/
 int exporting=0;
 unsigned char read_port(int port)
@@ -67,6 +90,7 @@ unsigned char read_port(int port)
 void write_port(int port, char data)
 {
 	char old;
+
 	old=read_port(port);
 	port_collectors[port]=port_latches[port]&data;
 	data_memory[port_to_addr(port)]=port_collectors[port];
@@ -78,6 +102,8 @@ void write_port(int port, char data)
 
 }
 /*		</API for module.c>		*/
+
+
 
 /*		<API for instructions>		*/
 unsigned char read_data(unsigned addr)
@@ -92,9 +118,12 @@ unsigned char read_data(unsigned addr)
 void write_data(unsigned addr, char data)
 {
 	int port;
+
 	data_memory[addr]=data;
 	if(isport(addr)){
 		port=addr_to_port(addr);
+
+		printf("[emux]\twriting 0x%x to port %d\n", data, port);
 		port_latches[port]=data;
 		port_collectors[port]=data;
 
@@ -102,9 +131,6 @@ void write_data(unsigned addr, char data)
 		module_export_port(port);
 		exporting=0;
 	}
-
-
-
 }
 unsigned char read_code(unsigned addr)
 {
@@ -147,7 +173,7 @@ inline void write_Acc(char data)
 /*	So, bit adressable memory is inside (0x20; 0x2F) and (0x80; 0xF8)
  *	Between 0x20 and 0x2F is adressable each bit.
  *	Between 0x80 and 0xF8 are adressable bits in bytes 0x80, 0x88, 0x90 etc.
- *	I wanna be a rev3rse engineer ;)
+ *	I wanna be rev3rse engineer ;)
  */
 
 inline unsigned char addr_to_bit_bit(unsigned char addr)
@@ -163,7 +189,7 @@ inline unsigned char addr_to_bit_byte(unsigned char addr)
 	return(0x20|(addr>>3));
 }
 
-inline void set_bit(unsigned char addr)
+void set_bit(unsigned char addr)
 {
 	unsigned char byte;
 	unsigned char bit;
@@ -171,12 +197,15 @@ inline void set_bit(unsigned char addr)
 
 	byte=addr_to_bit_byte(addr);
 	bit=addr_to_bit_bit(addr);
+/*	printf("[emux]\tset bit %d.%d\n", byte, bit);*/
+
 	data=data_memory[byte];
 	data|=1<<bit;
-	write_data(addr, data);
+	write_data(byte, data);
+
 }
 
-inline void clr_bit(unsigned char addr)
+void clr_bit(unsigned char addr)
 {
 	unsigned char byte;
 	unsigned char bit;
@@ -184,19 +213,33 @@ inline void clr_bit(unsigned char addr)
 
 	byte=addr_to_bit_byte(addr);
 	bit=addr_to_bit_bit(addr);
+/*	printf("[emux]\tclear bit %d.%d\n", byte, bit);*/
 	data=data_memory[byte];
 	data&=~(1<<bit);
 	write_data(byte, data);
 }
 
-inline int test_bit(unsigned char addr)
+void neg_bit(unsigned char addr)
+{
+	unsigned char byte;
+	unsigned char bit;
+	unsigned char data;
+
+	byte=addr_to_bit_byte(addr);
+	bit=addr_to_bit_bit(addr);	
+	data=data_memory[byte];
+	data^=1<<bit;
+	write_data(byte, data);
+}
+
+
+int test_bit(unsigned char addr)
 {
 	unsigned char byte;
 	unsigned char bit;
 
 	byte=addr_to_bit_byte(addr);
 	bit=addr_to_bit_bit(addr);
-
 	return(data_memory[byte]&(1<<bit));
 }
 /*		</TODO: test this stuff>	*/
@@ -204,103 +247,33 @@ inline int test_bit(unsigned char addr)
 /*		</API for instructions>		*/
 
 
-/*	TODO: checksum, segments and other Intel Hex features	*/
-int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)
+
+
+
+
+void do_reset(void)
 {
-	FILE *fr;
-	char buff[80];
+	memset (data_memory, 0, DATA_LENGHT);
+	memset (port_latches, 0xFF, 4);
+	memset (port_collectors, 0xFF, 4);
+	data_memory[SP]=7;
 
-	int ok;
-	unsigned size;
-	unsigned offset;
-	unsigned type;
-	unsigned segment=0;
+	data_memory[0x80]=0xFF;
+	data_memory[0x90]=0xFF;
+	data_memory[0xA0]=0xFF;
+	data_memory[0xB0]=0xFF;
 
-	int i;
-	unsigned int data;
-	unsigned int sum=0;
-
-	/*	source file and destination index	*/
-
-
-	if (!(file && dest))
-		return -1;
-
-	fr=fopen(file, "rt");
-	if (fr == NULL)
-		return -1;
-
-	while (1 == fscanf(fr, "%s", buff)){
-		if (buff[0] != ':') {
-			fprintf(stderr, "bad format\n");
-			return -1;
-		}
-
-		ok=sscanf(buff, ":%2x%4x%2x", &size, &offset, &type);
-		if (ok != 3) {
-			fprintf(stderr, "bad format\n");
-			return -1;
-		}
-
-		switch(type){
-
-			case 0:
-			sum=0;
-			if (16*segment+offset+size >= dest_len){
-				fprintf(stderr, "out of bounds\n");
-				return -1;
-			}
-			for (i=0; i<size; i++) {
-/*				data=16*(buff[9+2*i])+buff[9+2*i+1];*/
-				sscanf(buff+9+2*i, "%2x", &data);
-				sum+=data;
-				dest[16*segment+offset+i]=data;
-
-
-			}
-
-
-			break;
-			case 1:
-				return 0;
-			default:
-				return 3;
-
-		}
-
-
-
-	}
-	return 2;
-
+	PC=0;
 }
-
-
-void dump(void)
-{
-	int i;
-	for(i=0; i<256; i++){
-		if (i%16 == 0)
-			printf("\n");
-		printf("%2x", data_memory[i]);
-	}
-	printf("\nPC == %x\n", PC);
-	printf("\n*SP == %x\n", *SP);
-
-}
-
 
 
 void init_machine(void)
 {
 	memset(code_memory, 0, CODE_LENGHT);
-	memset(data_memory, 0, DATA_LENGHT);
-	memset (port_latches, 0xFF, 4);
-	memset (port_collectors, 0xFF, 4);
-	*SP=7;
-	PC=0;
-
+	do_reset();
 }
+
+
 
 
 
@@ -308,6 +281,15 @@ void init_machine(void)
 
 /*	FIXME:	Do not use this macros	*/
 
+inline int timer_0_mode(void)
+{
+	return (data_memory[TMOD]&0x03);
+}
+
+inline int timer_1_mode(void)
+{
+	return ((data_memory[TMOD]>>4)&0x03);
+}
 inline int timer_0_event(void)
 {
 	if ((data_memory[TMOD]&0x04) == 0)
@@ -325,18 +307,6 @@ inline int timer_1_event(void)
 		return 1;
 	return 0;
 }
-
-
-inline int timer_0_mode(void)
-{
-	return (data_memory[TMOD]&0x03);
-}
-
-inline int timer_1_mode(void)
-{
-	return ((data_memory[TMOD]>>4)&0x03);
-}
-
 inline int timer_0_running(void)
 {
 	/*	TR0 is not set	*/
@@ -376,33 +346,66 @@ static inline void update_timer_0(void)
 	if(timer_0_mode() == 0)
 		data_memory[TL0]&=0x1f;
 /*	increment TH0 if 8b mode or overflow	*/
-	if ((timer_0_mode() & 2) || (data_memory[TL0] == 0)) {
+	if ((timer_0_mode() > 2) || (data_memory[TL0] == 0)) {
 		data_memory[TH0]++;
 	}
 /*		overflow test - TODO:		*/
-	if ((timer_0_mode() == 1) && (data_memory[TH0] == 0)
-	   && (data_memory[TL0] == 0)) {
-		data_memory[TCON]^=0x20;
+	switch(timer_0_mode()) {
+		case 0:
+		case 1:
+		if ((data_memory[TH0] == 0) && (data_memory[TL0] == 0)){
+			neg_bit(TF0);
+/*			data_memory[TCON]^=0x20;*/
+/*			set_bit(TF0);	*/
+		}
+		break;
+		case 2:
+		if (data_memory[TL0] == 0) {
+			neg_bit(TF0);
+			data_memory[TL0]=data_memory[TH0];
+		}
+		break;
+
+		case 3:
+		break;
 	}
+
 }
 static inline void update_timer_1(void)
 {
-#if 0
-	printf("updating timer 1\n");
-	(*TL1)++;
-	if(timer_1_mode == 0)
-		*TL1&=0x1f;
-/*	increment TH1 if 8b mode or overflow	*/
-	*TH1+=timer_1_mode&2 || !*TL1;
-/*		TH1 overflows to TF1		*/
-	*TCON^=((timer_1_mode&2&&!*TL1)||(!*TH1))<<7;
-#endif
-}
-static inline void do_timers_stuff(void)
-{
 
-	if (timer_0_running() && timer_0_event())
+	data_memory[TL1]++;
+	if(timer_1_mode() == 0)
+		data_memory[TL1]&=0x1f;
+/*	increment TH0 if 8b mode or overflow	*/
+	if ((timer_1_mode() & 2) || (data_memory[TL1] == 0)) {
+		data_memory[TH1]++;
+	}
+/*		overflow test - TODO:		*/
+	switch(timer_1_mode()) {
+		case 0:
+		case 1:
+		if ((data_memory[TH1] == 0) && (data_memory[TL1] == 0)){
+			neg_bit(TF1);
+		}
+		break;
+		case 2:
+		if (data_memory[TL1] == 0) {
+			neg_bit(TF1);
+			data_memory[TL1]=data_memory[TH1];
+		}
+		break;
+
+		case 3:
+		break;
+	}
+
+}
+static void do_timers_stuff(void)
+{
+	if (timer_0_running() && timer_0_event()) {
 		update_timer_0();
+	}
 
 	if (timer_1_running() && timer_0_event())
 		update_timer_1();
@@ -413,17 +416,107 @@ static inline void do_timers_stuff(void)
 /*	TODO: interrupt requests	*/
 static inline void set_irqs(void)
 {
-	#if 0
-	/*	sets IE0 if request		*/
-	*TCON|=(*P3>>1)&0x02;
-	/*	sets IE1 if request		*/
-	*TCON|=*P2&0x08;
-	#endif
+	/*	INT0	*/
+	if((test_bit(IT0) && (port_fall[3]&0x04)) || test_bit(INT0))
+		set_bit(IE0);
+	/*	INT1	*/
+	if((test_bit(IT1) && (port_fall[3]&0x08)) || test_bit(INT1))
+		set_bit(IE1);
 
 }
+	/*	TODO: serial	*/
 
-static inline void do_int_requests(void)
+
+void push(unsigned char data)
 {
+	data_memory[SP]++;
+	data_memory[data_memory[SP]]=data;
+}
+unsigned char pop(void)
+{
+	unsigned char data;
+	data=data_memory[data_memory[SP]];
+	data_memory[SP]--;
+	return(data);
+}
+
+void jump_to(unsigned char addr)
+{
+	PC=addr;
+}
+
+#define HAVE_REQUEST (test_bit(IE0) || test_bit(TF0) || test_bit(IE1) || test_bit(TF1))
+#define HAVE_PRIORITY_REQUEST ( (test_bit(IE0) && test_bit(PX0)) ||\
+				(test_bit(TF0) && test_bit(PT0)) ||\
+				(test_bit(IE1) && test_bit(PX1)) ||\
+				(test_bit(TF1) && test_bit(PT1)) )
+
+static void do_int_requests(void)
+{
+	if (test_bit(EA) == 0)
+		return;
+
+/*		going to interrupt?	*/
+	if (HAVE_REQUEST == 0)
+		return;
+
+	if (interrupt_state == 2)
+		return;
+	if ((interrupt_state == 1) && (HAVE_PRIORITY_REQUEST == 0))
+		return;
+
+	if (HAVE_PRIORITY_REQUEST == 1)
+		interrupt_state|=2;
+	else
+		interrupt_state|=1;
+
+	push((unsigned char)(PC&0x00FF));
+	push((unsigned char)(PC>>8));
+
+/*		high priority		*/
+	if (test_bit(PX0) && test_bit(IE0)) {
+		interrupt_state=2;
+		jump_to(EX0_ADDR);
+		return;
+	}
+	if (test_bit(PT0) && test_bit(TF0)) {
+		interrupt_state=2;
+		jump_to(ET0_ADDR);
+		return;
+	}
+	if (test_bit(PX1) && test_bit(IE1)) {
+		interrupt_state=2;
+		jump_to(EX1_ADDR);
+		return;
+	}
+	if (test_bit(PT1) && test_bit(TF1)) {
+		interrupt_state=2;
+		jump_to(ET1_ADDR);
+		return;
+	}
+/*		low priority		*/
+	if (test_bit(IE0)) {
+		interrupt_state=1;
+		jump_to(EX0_ADDR);
+		return;
+	}
+	if (test_bit(TF0)) {
+		interrupt_state=1;
+		jump_to(ET0_ADDR);
+		return;
+	}
+	if (test_bit(IE1)) {
+		interrupt_state=1;
+		jump_to(EX1_ADDR);
+		return;
+	}
+	if (test_bit(TF1)) {
+		interrupt_state=1;
+		jump_to(ET1_ADDR);
+		return;
+	}
+
+
 
 
 }
@@ -447,36 +540,75 @@ void do_every_instruction_stuff(int times)
 	}
 	do_int_requests();
 }
-int do_few_instructions(int cnt)
+int do_few_instructions(int cycles)
 {
 	int decrement;
-	while (cnt > 0){
+	while (cycles > 0){
+		if (running == 0)
+			return 0;
 		decrement=opcodes[code_memory[PC]].time;
 		opcodes[code_memory[PC]].f(PC);
 
 		do_every_instruction_stuff(decrement);
 		module_queue_perform(decrement);
-		cnt-=decrement;
-
-/*		dump();*/
-
+		cycles-=decrement;
 	}
-	return cnt;
+	return cycles;
 }
 /*		</main execution loop>		*/
+int seconds=0;
 
 void alarm_handler(void)
 {
 
 	static int alarm_calls=0;
 	static int last=0;
+	int cnt;
 
 	alarm_calls++;
 	if (alarm_calls == sync_freq) {
 /*		printf("one second\n");*/
 		alarm_calls=0;
 	}
-	last=do_few_instructions(machine_freq/sync_freq+last);
+	if (running) {
+/*		printf("running\n");*/
+		gui_callback();
+		cnt=machine_freq/sync_freq+last;
+		last=do_few_instructions(cnt);
+	}
+}
+
+
+
+char *dump_head="--\t00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0A\t0B\t0C\t0D\t0E\t0F\n";
+
+void data_dump(char *buffer)
+{
+	unsigned int i, j;
+	char c;
+
+	sprintf(buffer, dump_head);
+	buffer+=strlen(buffer);
+
+	for (i=0; i<16; i++) {
+		sprintf(buffer, "%X0\t", i);
+		buffer+=3;
+		for (j=0; j<16; j++) {
+			sprintf(buffer, "%02x\t", data_memory[16*i+j]);
+			buffer+=3;
+		}
+		for (j=0; j<16; j++) {
+			if (isprint(data_memory[16*i+j])) {
+				c=(char)data_memory[16*i+j];
+			} else {
+				c='.';
+			}
+			*buffer++=c;
+		}
+		*buffer++='\t';
+		*buffer++='\n';
+	}
+
 }
 
 
@@ -485,20 +617,9 @@ void alarm_handler(void)
 
 int main(int argc, char *argv[])
 {
-
-	/*	main	*/
-	char buff[80];
-	if (argc < 2){
-		printf("usage: %s file\n", argv[0]);
-		return 1;
-	}
+	printf("[emux]\tstarting..\n");
 	init_instructions();
 	init_machine();
-/*	update_ports();*/
-	if (load_hex(argv[1], code_memory, 64*1024)) {
-		fprintf(stderr, "cannot open file\n");
-		return 1;
-	}
 
 	modules_init();
 
@@ -510,22 +631,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if(module_new("modules/bin/first.so")){
-/*	if (module_new("modules/bin/gtk-test.so")){*/
-		printf("cannot load module\n");
-		return 1;
-	}
-
 
 	setup_timer(sync_freq, alarm_handler);
-	printf("smyckaaaaaa...!\n");
-
-	while (1){
-
-		scanf("%79s", buff);
-		printf("buff: %s\n", buff);
-/*		printf("%d\n", choice);*/
-	}
-
+	
+	gui_run(&argc, &argv);
+	printf("[emux]\texiting..\n");
 	return 0;
 }

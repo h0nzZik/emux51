@@ -9,6 +9,8 @@
  */
 
 
+opcode_t opcodes[256];
+
 /*	TODO: check instruction times	*/
 
 
@@ -26,6 +28,7 @@ void mov_rx_imm8(unsigned short idx)
 
 	data=read_code(idx+1);
 	reg=read_code(idx)&0x07;
+
 	write_register(reg, data);
 	PC+=2;
 }
@@ -83,8 +86,6 @@ void djnz_rx_addr(unsigned short idx)
 	rdata--;
 	write_register(reg, rdata);
 
-/*	printf ("djnz:\t");*/
-
 	PC+=2;
 	if (rdata) {
 		PC+=addr;
@@ -130,7 +131,6 @@ void setb_c(unsigned short idx)
 /*		<clr instructions>		*/
 void clr_addr(unsigned short idx)
 {
-/*	printf("clr bit=%d\n", read_code(idx+1));*/
 	clr_bit(read_code(idx+1));
 	PC+=2;
 }
@@ -143,6 +143,19 @@ void clr_a(unsigned short idx)
 {
 	write_Acc(0);
 	PC++;
+}
+
+void cpl_addr(unsigned short idx)
+{
+	unsigned char addr;
+	addr=read_code(idx+1);
+
+	if (test_bit(addr)) {
+		clr_bit(addr);
+	} else {
+		set_bit(addr);
+	}
+	PC+=2;
 }
 /*		</clr instructions>		*/
 
@@ -185,13 +198,11 @@ void jnb(unsigned short idx)
 	addr=read_code(idx+1);
 	inc=read_code(idx+2);
 
-/*	printf("jnb bit=%d\n", addr);*/
 
 	PC+=3;
 	if(!test_bit(addr)){
-/*		printf("nerovna se, skacu\n");*/
 		PC+=inc;
-	} /*else printf("rovna se, jedu dal\n");*/
+	}
 }
 void jc(unsigned short idx)
 {
@@ -236,7 +247,6 @@ void sjmp(unsigned short idx)
 	/*	hey! add 2 before offset addition!	*/
 	PC+=2;
 	PC+=(signed char)code_memory[idx+1];
-	printf("sjmp to %d\n", PC);
 }
 
 
@@ -244,11 +254,9 @@ void sjmp(unsigned short idx)
 
 void acall(unsigned short idx)
 {
-	/*	push return value onto stack, little-endian	*/
-	(*SP)++;
-	data_memory[*SP]=(unsigned char)((PC+2)&0x00FF);
-	(*SP)++;
-	data_memory[*SP]=(unsigned char)((PC+2)>>8);
+	/*	push return adress onto stack, little-endian	*/
+	push((PC+2)&0x00FF);
+	push((PC+2)>>8);
 
 	PC=(((code_memory[idx]>>5)&0x07)<<8)|(code_memory[idx+1]);
 }
@@ -256,11 +264,9 @@ void acall(unsigned short idx)
 
 void lcall(unsigned short idx)
 {
-	/*	push return value onto stack, little-endian	*/
-	(*SP)++;
-	data_memory[*SP]=(unsigned char)((PC+3)&0x00FF);
-	(*SP)++;
-	data_memory[*SP]=(unsigned char)((PC+3)>>8);
+	/*	push return adress onto stack, little-endian	*/
+	push((PC+2)&0x00FF);
+	push((PC+2)>>8);
 
 	PC=(code_memory[idx+2]<<8)|(code_memory[idx+1]);
 
@@ -268,22 +274,39 @@ void lcall(unsigned short idx)
 
 void ret(unsigned short idx)
 {
-	PC=(data_memory[*SP]<<8)|(data_memory[(*SP)-1]);
-	(*SP)-=2;
+	PC=(data_memory[data_memory[SP]]<<8)|(data_memory[data_memory[SP]-1]);
+	data_memory[SP]-=2;
+}
+
+void reti(unsigned short idx)
+{
+	PC=pop()<<8|pop();
+	if (interrupt_state&2)
+		interrupt_state&=~2;
+	else
+	if (interrupt_state&1)
+		interrupt_state&=~1;
+	else
+	/*	wtf?	*/
+		;
 }
 
 
 /*	stack operations	*/
-void push(unsigned short idx)
+void push_addr(unsigned short idx)
 {
-	(*SP)++;
-	data_memory[*SP]=data_memory[code_memory[idx+1]];
+	unsigned char addr;
+
+	addr=read_code(idx+1);
+	push(read_data(addr));
 	PC+=2;
 }
-void pop(unsigned short idx)
+void pop_addr(unsigned short idx)
 {
-	data_memory[code_memory[idx+1]]=data_memory[*SP];
-	(*SP)--;
+	unsigned char addr;
+
+	addr=read_code(idx+1);
+	write_data(addr, pop());
 	PC+=2;
 }
 
@@ -291,6 +314,7 @@ void pop(unsigned short idx)
 void empty(unsigned short idx)
 {
 	fprintf(stderr, "unknown instruction on %d\n", idx);
+	fprintf(stderr, "opcode: 0x%x\n", read_code(idx));
 	exit(1);
 }
 /******************************************************************************/
@@ -350,11 +374,11 @@ void init_call_instructions(void)
 void init_stack_instructions(void)
 {
 	/*	push	*/
-	opcodes[0xc0].f=push;
+	opcodes[0xc0].f=push_addr;
 	opcodes[0xc0].time=2;
 
 	/*	pop	*/
-	opcodes[0xd0].f=pop;
+	opcodes[0xd0].f=pop_addr;
 	opcodes[0xd0].time=2;
 }
 
@@ -410,6 +434,14 @@ void init_clr(void)
 
 }
 
+
+void init_cpl(void)
+{
+	opcodes[0xB2].f=cpl_addr;
+	opcodes[0xB2].time=1;
+
+}
+
 void init_bit_cond_jumps(void)
 {
 	/*	jbc	*/
@@ -432,6 +464,9 @@ void init_ret_instructions(void)
 	/*	ret	*/
 	opcodes[0x22].f=ret;
 	opcodes[0x22].time=2;
+
+	opcodes[0x32].f=reti;
+	opcodes[0x32].time=2;
 }
 
 
@@ -453,6 +488,7 @@ void init_instructions(void)
 	init_mov_instructions();
 	init_clr();
 	init_setb();
+	init_cpl();
 	init_bit_cond_jumps();
 }
 

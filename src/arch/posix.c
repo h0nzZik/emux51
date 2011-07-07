@@ -1,6 +1,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <dlfcn.h>
 
 void (*timer_callback)(void);
 
@@ -27,4 +28,24 @@ int setup_timer(float freq, void (*callback)(void))
 	setitimer(ITIMER_REAL, &time_setting, NULL);
 
 	return 0;	
+}
+
+
+void *load_lib(const char *path)
+{
+	void *lib;
+	lib=dlopen(path, RTLD_LAZY);
+	return lib;
+}
+
+void *load_sym(void *lib, const char *name)
+{
+	void *sym;
+	sym=dlsym(lib, name);	
+	return sym;
+}
+
+void close_lib(void *lib)
+{
+	dlclose(lib);	
 }

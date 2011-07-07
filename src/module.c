@@ -5,16 +5,17 @@
 #include <pthread.h>
 #include <signal.h>
 #include <ctype.h>
-#include <dlfcn.h>
 
 #include <emux51.h>
 #include <module.h>
-#include <arch/arch.h>
+#include <gui.h>
+#include <arch.h>
 
 
-
+/*	delta list variables	*/
 dlist_t *dlist_first=NULL;
 dlist_t *dlist_last=NULL;
+
 
 char port_usage[PORTS_CNT];
 module_t modules[MODULE_CNT];
@@ -36,23 +37,17 @@ inline int test_module_id(modid_t modid)
 
 int module_load(char *path, module_t *mod)
 {
-	mod->id.handle=dlopen(path, RTLD_LAZY);
+	mod->id.handle=load_lib(path);
 	if (mod->id.handle == NULL) {
-		fprintf(stderr, "cannot load module from %s:\n"
-				"%s\n", path, dlerror());
+		fprintf(stderr, "cannot load module from %s:\n", path);
 		return (-1);
 	}
-	mod->f.init=dlsym (mod->id.handle,	"module_init" );
-	mod->f.exit=dlsym (mod->id.handle,	"module_exit" );
-/*		TODO: REMOVE:		*/
-/*
-	mod->f.write=dlsym(mod->id.handle,	"module_read" );
-	mod->f.read=dlsym (mod->id.handle,	"module_write");
-*/
+	mod->f.init=load_sym (mod->id.handle,	"module_init" );
+	mod->f.exit=load_sym (mod->id.handle,	"module_exit" );
 
 	if (!(mod->f.init && mod->f.exit)){
 		fprintf(stderr, "%s is bad module\n", path);
-		dlclose(mod->id.handle);
+		close_lib(mod->id.handle);
 		return -2;
 	}
 
@@ -79,7 +74,7 @@ int module_alloc_bits(modid_t modid, int port, char mask)
 {
 	/*	somebody is cheating	*/
 	if (port >= PORTS_CNT || test_module_id(modid) || exporting) {
-		fprintf(stderr, "somebody is cheating\n");
+/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
 	/*	any bits are alloced	*/
@@ -94,7 +89,7 @@ int module_alloc_bits(modid_t modid, int port, char mask)
 int module_free_bits(modid_t modid, int port, char mask)
 {
 	if (port >= PORTS_CNT || test_module_id(modid) || exporting) {
-		fprintf(stderr, "somebody is cheating\n");
+/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
 	mask&=modules[modid.id].mask[port];
@@ -110,10 +105,9 @@ int module_write_port(modid_t modid, int port, char data)
 	char new;
 	
 	if (port >= PORTS_CNT || test_module_id(modid) || exporting) {
-		fprintf(stderr, "somebody is cheating\n");
+/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
-	printf("module_write_port %d\n", port);
 	old=read_port(port);
 	new=old;
 	new|=data& modules[modid.id].mask[port];
@@ -125,10 +119,9 @@ int module_write_port(modid_t modid, int port, char data)
 char module_read_port(modid_t modid, int port)
 {
 	if (port >= PORTS_CNT || test_module_id(modid)) {
-		fprintf(stderr, "somebody is cheating\n");
+/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
-	printf("module_read_port %d\n", port);
 	return(read_port(port));	
 }
 
@@ -139,7 +132,7 @@ int module_queue_add(modid_t modid, unsigned cycles, void (*f)(void))
 	dlist_t *new;
 
 	if (test_module_id(modid)) {
-		fprintf(stderr, "somebody is cheating\n");
+/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
 	new=malloc(sizeof(dlist_t));
@@ -182,15 +175,13 @@ void module_queue_perform(int steps)
 
 	entry=dlist_first;
 	int i=0;
-/*	printf("steps == %d\n", steps);*/
 	while (entry) {
 		i++;
 		if (entry->dt < steps) {
 			/*	perform the operation	*/
-			/*printf("going to perform operation..\n");*/
 			if (entry->f)
 				entry->f();
-			else printf("empty f?, i == %d\n", i);
+/*			else fprintf(stderr, "empty f?, i == %d\n", i);*/
 			steps-=entry->dt;
 
 			/*	free current node	*/
@@ -200,7 +191,6 @@ void module_queue_perform(int steps)
 			dlist_first=entry;
 		}
 		else {
-/*			printf("dt-=%d\n", steps);*/
 			entry->dt-=steps;
 			return;
 		}
@@ -209,12 +199,13 @@ void module_queue_perform(int steps)
 	return;
 }
 
-int handle_event(modid_t modid, const char *event, void (*handle)(int))
+/*	function for registering event handlers	*/
+int handle_event(modid_t modid, const char *event, void (*handle)())
 {
 	module_t *mod;
 
 	if (test_module_id(modid)) {
-		fprintf(stderr, "somebody is cheating\n");
+/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
 	mod=&modules[modid.id];
@@ -241,7 +232,6 @@ void module_import_port(int port)
 {
 	int i;
 	module_t *mod;
-	printf("module_import_port\n");
 
 	for (i=0; i<MODULE_CNT; i++) {
 		mod=&modules[i];
@@ -263,15 +253,17 @@ void module_export_port(int port)
 	}
 }
 
+/*	called from commands	*/
 int module_new(char *path)
 {
 	int i;
 	module_t *mod;
 
+	void *mod_rval;
+
 	if (path == NULL) {
 		return -1;
 	}
-
 
 	for(i=0; i<MODULE_CNT; i++) {
 		if (modules[i].id.handle == NULL) {
@@ -296,10 +288,26 @@ int module_new(char *path)
 	mod->callbacks.handle_event=handle_event;
 	mod->callbacks.queue_add=module_queue_add;
 
-	mod->f.init(mod->id, &mod->callbacks);
+	
+	mod_rval=mod->f.init(mod->id, &mod->callbacks);
+
+	if (mod_rval != NULL)
+		gui_add(mod_rval);
+
+	return mod->id.id;
+}
+
+int module_destroy(unsigned int id)
+{
+	if (id<0 || id>=MODULE_CNT) {
+		return -1;
+	}
+	modules[id].f.exit("users choice");
+	close_lib(modules[id].id.handle);
 	return 0;
 }
 
+/*	called from main while starting program	*/
 int modules_init(void)
 {
 	memset(modules, 0, MODULE_CNT*sizeof(module_t));

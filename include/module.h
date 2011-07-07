@@ -23,7 +23,7 @@ typedef struct {
 	int  (*write_port)  (modid_t id, int port, char data);
 	int  (*alloc_bits)  (modid_t id, int port, char mask);
 	int  (*free_bits)   (modid_t id, int port, char mask);
-	int  (*handle_event)(modid_t id, const char *event, void (*handle)(int));
+	int  (*handle_event)(modid_t id, const char *event, void (*handle)());
 	int  (*queue_add)   (modid_t id, unsigned cycles, void (*event)(void));
 
 } emuf_t;
@@ -41,12 +41,11 @@ typedef struct {
 
 typedef struct {
 	/*	only these functions are necessary	*/
-	void (*init) (modid_t id, emuf_t *callbacks);
+	void *(*init) (modid_t id, emuf_t *callbacks);
 	void (*exit) (const char *reason);	
+	/*		*/
 	void (*write)(int port);
 	void (*read) (int port);
-
-
 } modf_t;
 
 
@@ -69,6 +68,7 @@ typedef struct DLIST {
 
 
 int module_new(char *path);
+int module_destroy(unsigned int id);
 
 void module_import_port(int port);
 void module_export_port(int port);

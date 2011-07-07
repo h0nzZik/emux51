@@ -1,27 +1,29 @@
-Welcome to emux51, the modular 8051 emulator.
+*	Welcome to emux51, the modular 8051 emulator.			*
 
 		Priorities:
-*	modularity
-*	portability
-*	simplicity
+*	modularity							*
+*	portability							*
+*	simplicity							*
 
 
 		Destination platforms:
-*	At first, I want to use this under standard Linux distributions.
-*	At second, some people wants to use this under standard Windows.
-*	At third, I would be happy if this will be able to run
+*	At first, I want to use this under standard Linux distributions	*
+*	At second, some people wants to use this under standard Windows	*
+*	At third, I would be happy if this will be able to run		*
 	on any Posix compatabile operation system.
 
 
 		Status:
-*	Module interface is done.
-*	Indirect memory access.
-*	Basic instructions are ok.
-*	Timers are broken now.
+*	Module interface is ok.						*
+*	Indirect memory access.						*
+*	Basic instructions are ok.					*
+*	Timers may be good now.						*
+*	Simple graphic interface					*
 
 		TODO:
-*	Fix timers.
-*	Do interrupts.
-*	Do a lot of instructions.
-*	Split architecture dependent code / only windows code into separated file.
+*	Do some timer stuff.						*
+*	Check interrupts.						*
+*	Do a lot of instructions.					*
+*	Add data types for emulator pointers and data types.		*
 
+EOF.
