@@ -55,8 +55,10 @@ double sync_freq;
 int isport(unsigned addr)
 {
 	addr-=0x80;
-	addr%=0x10;
-	return(!addr);
+	if (addr % 0x10)
+		return 0;
+	addr/=0x10;
+	return(addr < 4);
 }
 
 unsigned port_to_addr(int port)
@@ -404,7 +406,6 @@ static void do_timers_stuff(void)
 }
 
 
-
 /*	TODO: interrupt requests	*/
 static inline void set_irqs(void)
 {
@@ -445,13 +446,12 @@ void jump_to(unsigned char addr)
 
 static void do_int_requests(void)
 {
+
 	if (test_bit(EA) == 0)
 		return;
-
 /*		going to interrupt?	*/
 	if (HAVE_REQUEST == 0)
 		return;
-
 	if (interrupt_state == 2)
 		return;
 	if ((interrupt_state == 1) && (HAVE_PRIORITY_REQUEST == 0))
@@ -459,8 +459,9 @@ static void do_int_requests(void)
 
 	if (HAVE_PRIORITY_REQUEST == 1)
 		interrupt_state|=2;
-	else
+	else {
 		interrupt_state|=1;
+	}
 
 	push((unsigned char)(PC&0x00FF));
 	push((unsigned char)(PC>>8));
@@ -468,11 +469,14 @@ static void do_int_requests(void)
 /*		high priority		*/
 	if (test_bit(PX0) && test_bit(IE0)) {
 		interrupt_state=2;
+		printf("[emux]\tjumping to ext0\n");
 		jump_to(EX0_ADDR);
 		return;
 	}
 	if (test_bit(PT0) && test_bit(TF0)) {
+		clr_bit(TF0);
 		interrupt_state=2;
+		printf("[emux]\tjumping to timer 0\n");
 		jump_to(ET0_ADDR);
 		return;
 	}
@@ -482,6 +486,7 @@ static void do_int_requests(void)
 		return;
 	}
 	if (test_bit(PT1) && test_bit(TF1)) {
+		clr_bit(TF1);
 		interrupt_state=2;
 		jump_to(ET1_ADDR);
 		return;
@@ -489,25 +494,31 @@ static void do_int_requests(void)
 /*		low priority		*/
 	if (test_bit(IE0)) {
 		interrupt_state=1;
+		printf("[emux]\tjumping to ext0\n");
 		jump_to(EX0_ADDR);
 		return;
 	}
 	if (test_bit(TF0)) {
+		clr_bit(TF0);
 		interrupt_state=1;
+		printf("[emux]\tjumping to timer 0\n");
 		jump_to(ET0_ADDR);
 		return;
 	}
 	if (test_bit(IE1)) {
 		interrupt_state=1;
+		printf("[emux]\tjumping to ext1\n");
 		jump_to(EX1_ADDR);
 		return;
 	}
 	if (test_bit(TF1)) {
+		clr_bit(TF1);
 		interrupt_state=1;
 		jump_to(ET1_ADDR);
 		return;
 	}
 
+	printf("[emux]\twtf?\n");
 
 
 
@@ -526,7 +537,7 @@ void do_every_instruction_stuff(int times)
 		counter++;
 		if (FORCE_READ)
 			module_import_port(3);
-		set_irqs();
+/*		set_irqs();				*/
 		do_timers_stuff();
 		times--;
 	}

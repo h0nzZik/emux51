@@ -18,14 +18,17 @@
 *	Indirect memory access.						*
 *	Basic instructions are ok.					*
 *	Timers may be good now.						*
-*	Simple graphic interface					*
+*	Simple graphic interface.					*
+*	Timer interrupts are ok.					*
+*	External interrupts are broken and disabled.			*
 
 
 		TODO:
-*	Do some timer stuff.						*
-*	Check interrupts.						*
+*	Fix external interrupts.					*
+*	Improve UI.							*
 *	Do a lot of instructions.					*
 *	Add data types for emulator pointers and data types.		*
+*	[Do some timer stuff.]						*
 
 
 		Actual instruction set:
