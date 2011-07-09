@@ -1,8 +1,3 @@
-/*
- *	Chyba: z nejakeho duvodu se nastavi mod 2 misto modu 1.
- */
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
