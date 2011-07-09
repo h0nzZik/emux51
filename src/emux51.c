@@ -24,8 +24,6 @@ int loaded=0;
 char hexfile[PATH_MAX];
 int interrupt_state=0;
 
-FILE *async;
-
 
 /*	64K  code memory		*/
 unsigned char code_memory[CODE_LENGHT];
@@ -61,7 +59,6 @@ int isport(unsigned addr)
 	return(!addr);
 }
 
-/*	port adresses	*/
 unsigned port_to_addr(int port)
 {
 	port%=PORTS_CNT;
@@ -138,28 +135,29 @@ void write_code(unsigned addr, char data)
 }
 
 
-inline unsigned reg_to_addr(int reg)
+unsigned reg_to_addr(int reg)
 {
 	unsigned base;
+
 	base=data_memory[PSW]&0x18;
 	return(base|(reg&0x07));
 }
 
-inline unsigned char read_register(int reg)
+unsigned char read_register(int reg)
 {
 	return(data_memory[reg_to_addr(reg)]);
 }
 
-inline void write_register(int reg, char data)
+void write_register(int reg, char data)
 {
 	data_memory[reg_to_addr(reg)]=data;
 }
 
-inline unsigned char read_Acc(void)
+unsigned char read_Acc(void)
 {
 	return(data_memory[Acc]);
 }
-inline void write_Acc(char data)
+void write_Acc(char data)
 {
 	data_memory[Acc]=data;
 }
@@ -192,7 +190,6 @@ void set_bit(unsigned char addr)
 
 	byte=addr_to_bit_byte(addr);
 	bit=addr_to_bit_bit(addr);
-/*	printf("[emux]\tset bit %d.%d\n", byte, bit);*/
 
 	data=data_memory[byte];
 	data|=1<<bit;
@@ -208,7 +205,7 @@ void clr_bit(unsigned char addr)
 
 	byte=addr_to_bit_byte(addr);
 	bit=addr_to_bit_bit(addr);
-/*	printf("[emux]\tclear bit %d.%d\n", byte, bit);*/
+
 	data=data_memory[byte];
 	data&=~(1<<bit);
 	write_data(byte, data);
