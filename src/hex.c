@@ -19,28 +19,28 @@ int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)
 	/*	source file and destination index	*/
 	if (!(file && dest))
 		return -1;
-	printf("file == %s\n", file);
+	printf("[emux]\tfile == %s\n", file);
 	fr=fopen(file, "rt");
 	if (fr == NULL){
-		perror("fopen");
+		perror("[emux]\tfopen");
 		return -2;
 	}
 
 	while (1 == fscanf(fr, "%s", buff)){
 		if (buff[0] != ':') {
-			fprintf(stderr, "bad format\n");
+			fprintf(stderr, "[emux]\tbad format\n");
 			return -3;
 		}
 		ok=sscanf(buff, ":%2x%4x%2x", &size, &offset, &type);
 		if (ok != 3) {
-			fprintf(stderr, "bad format\n");
+			fprintf(stderr, "[emux]\tbad format\n");
 			return -4;
 		}
 		switch(type){
 			case 0:
 			sum=0;
 			if (16*segment+offset+size >= dest_len){
-				fprintf(stderr, "out of bounds\n");
+				fprintf(stderr, "[emux]\tout of bounds\n");
 				return -1;
 			}
 			for (i=0; i<size; i++) {

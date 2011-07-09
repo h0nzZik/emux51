@@ -482,12 +482,14 @@ static void do_int_requests(void)
 	}
 	if (test_bit(PX1) && test_bit(IE1)) {
 		interrupt_state=2;
+		printf("[emux]\tjumping to ext1\n");
 		jump_to(EX1_ADDR);
 		return;
 	}
 	if (test_bit(PT1) && test_bit(TF1)) {
 		clr_bit(TF1);
 		interrupt_state=2;
+		printf("[emux]\tjumping to timer 1\n");
 		jump_to(ET1_ADDR);
 		return;
 	}
@@ -514,6 +516,7 @@ static void do_int_requests(void)
 	if (test_bit(TF1)) {
 		clr_bit(TF1);
 		interrupt_state=1;
+		printf("[emux]\tjumping to timer 1\n");
 		jump_to(ET1_ADDR);
 		return;
 	}
@@ -574,7 +577,6 @@ void alarm_handler(void)
 		alarm_calls=0;
 	}
 	if (running) {
-/*		printf("running\n");*/
 		gui_callback();
 		cnt=machine_freq/sync_freq+last;
 		last=do_few_instructions(cnt);
@@ -628,12 +630,6 @@ int main(int argc, char *argv[])
 
 	machine_freq=MACHINE_FREQ_DEFAULT;
 	sync_freq=SYNC_FREQ_DEFAULT;
-
-	if (sync_freq > machine_freq){
-		fprintf(stderr, "bad sync frequency\n");
-		return 1;
-	}
-
 
 	setup_timer(sync_freq, alarm_handler);
 	

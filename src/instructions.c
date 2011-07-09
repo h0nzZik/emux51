@@ -368,8 +368,8 @@ void pop_addr(unsigned short idx)
 
 void empty(unsigned short idx)
 {
-	fprintf(stderr, "unknown instruction on %d\n", idx);
-	fprintf(stderr, "opcode: 0x%x\n", read_code(idx));
+	fprintf(stderr, "[emux]\tunknown instruction on %d\n", idx);
+	fprintf(stderr, "[emux]\t\topcode: 0x%x\n", read_code(idx));
 	exit(1);
 }
 /******************************************************************************/

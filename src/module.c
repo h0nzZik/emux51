@@ -39,14 +39,14 @@ int module_load(char *path, module_t *mod)
 {
 	mod->id.handle=load_lib(path);
 	if (mod->id.handle == NULL) {
-		fprintf(stderr, "cannot load module from %s:\n", path);
+		fprintf(stderr, "[emux]\tcannot open file %s:\n", path);
 		return (-1);
 	}
 	mod->f.init=load_sym (mod->id.handle,	"module_init" );
 	mod->f.exit=load_sym (mod->id.handle,	"module_exit" );
 
 	if (!(mod->f.init && mod->f.exit)){
-		fprintf(stderr, "%s is bad module\n", path);
+		fprintf(stderr, "[emux]\t%s is bad module\n", path);
 		close_lib(mod->id.handle);
 		return -2;
 	}
@@ -72,9 +72,7 @@ int module_load(char *path, module_t *mod)
 
 int module_alloc_bits(modid_t modid, int port, char mask)
 {
-	/*	somebody is cheating	*/
 	if (port >= PORTS_CNT || test_module_id(modid) || exporting) {
-/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
 	/*	any bits are alloced	*/
@@ -89,7 +87,6 @@ int module_alloc_bits(modid_t modid, int port, char mask)
 int module_free_bits(modid_t modid, int port, char mask)
 {
 	if (port >= PORTS_CNT || test_module_id(modid) || exporting) {
-/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
 	mask&=modules[modid.id].mask[port];
@@ -105,7 +102,6 @@ int module_write_port(modid_t modid, int port, char data)
 	char new;
 	
 	if (port >= PORTS_CNT || test_module_id(modid) || exporting) {
-/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
 	old=read_port(port);
@@ -137,7 +133,7 @@ int module_queue_add(modid_t modid, unsigned cycles, void (*f)(void))
 	}
 	new=malloc(sizeof(dlist_t));
 	if (new == NULL) {
-		fprintf(stderr, "OOM while queueing\n");
+		fprintf(stderr, "[emux]\tOOM while queueing\n");
 		return -2;
 	}
 	new->f=f;
@@ -272,7 +268,7 @@ int module_new(char *path)
 		}
 	}
 	if (i == MODULE_CNT) {
-		fprintf(stderr, "module_new failed: there's no space 4U\n");
+		fprintf(stderr, "[emux]\tcan not load module because of limit\n");
 		return -1;
 	}
 	if (module_load(path, mod)){

@@ -186,13 +186,7 @@ static void gui_mod_ld(void *data)
 
 int gui_run(int *argc, char **argv[])
 {
-	printf("gui_run\n");
-	g_thread_init(NULL);
-	gdk_threads_init();
-	printf("thread ok\n");
-
 	gtk_init(argc, argv);
-	printf("gtk_init ok\n");
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), " Welcome in Emux51");
 	g_signal_connect(window, "delete_event",
@@ -202,8 +196,6 @@ int gui_run(int *argc, char **argv[])
 
 
 	data_dump(dumped_text);
-	printf("len == %d\n", strlen(dumped_text));
-
 
 	mbox=gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(window), mbox);
