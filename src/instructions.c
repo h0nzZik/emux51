@@ -70,6 +70,61 @@ void mov_rx_a(unsigned short idx)
 	write_register(reg, data);
 	PC++;
 }
+void mov_a_imm8(unsigned short idx)
+{
+	unsigned char data;
+
+	data=read_code(idx+1);
+	write_Acc(data);
+	PC+=2;
+}
+void mov_at_rx_imm8(unsigned short idx)
+{
+	unsigned short addr;
+	unsigned char data;
+
+	data=read_code(idx+1);
+	addr=read_register(read_code(idx)&0x01);
+	write_data(addr, data);
+	PC+=2;
+}
+void mov_at_rx_a(unsigned short idx)
+{
+	unsigned short addr;
+
+	addr=read_register(read_code(idx)&0x01);
+	write_data(addr, read_Acc());
+	PC+=2;
+}
+void mov_at_rx_addr(unsigned short idx)
+{
+	unsigned char src;
+	unsigned char dest;
+
+	src=read_code(idx+1);
+	dest=read_register(read_code(idx)&0x01);
+	write_data(dest, read_data(src));
+	PC+=2;
+}
+void mov_a_at_rx(unsigned short idx)
+{
+	unsigned char addr;
+
+	addr=read_register(read_code(idx)&0x01);
+	write_Acc(read_data(addr));
+	PC++;
+}
+void mov_a_addr(unsigned short idx)
+{
+	unsigned char addr;
+
+	addr=read_code(idx+1);
+	write_Acc(read_data(addr));
+	PC++;
+}
+
+
+
 /*		</mov instructions>		*/
 
 
@@ -318,7 +373,7 @@ void empty(unsigned short idx)
 	exit(1);
 }
 /******************************************************************************/
-/*				INICIALIZATION				      */
+/*				INITIALIZATION				      */
 /******************************************************************************/
 
 void init_mov_instructions(void)
@@ -338,22 +393,63 @@ void init_mov_instructions(void)
 
 
 	/*	mov addr, rx	*/
-	opcodes[0x88].f=mov_addr_rx;
+	for (i=0x88; i<=0x8F; i++) {
+		opcodes[i].f=mov_addr_rx;
+		opcodes[i].time=2;
+	}
+/*	opcodes[0x88].f=mov_addr_rx;
 	opcodes[0x88].time=2;
 	opcodes[0x8C]=opcodes[0x8B]=opcodes[0x8A]=opcodes[0x89]=opcodes[0x88];
 	opcodes[0x8F]=opcodes[0x8E]=opcodes[0x8D]=opcodes[0x88];
-
+*/
 	/*	mov rx, addr	*/
+	for (i=0xA8; i<=0xAF; i++) {
+		opcodes[i].f=mov_rx_addr;
+		opcodes[i].time=2;
+	}
+/*
 	opcodes[0xA8].f=mov_rx_addr;
 	opcodes[0xA8].time=2;
 	opcodes[0xAC]=opcodes[0xAB]=opcodes[0xAA]=opcodes[0xA9]=opcodes[0xA8];
 	opcodes[0xAF]=opcodes[0xAE]=opcodes[0xAD]=opcodes[0xA8];
+*/
 
 	/*	mov rx, #imm8	*/
 	for (i=0x78; i<=0x7F; i++) {
 		opcodes[i].f=mov_rx_imm8;
 		opcodes[i].time=1;
 	}
+
+	/*	mov a, #imm8	*/
+	opcodes[0x75].f=mov_a_imm8;
+	opcodes[0x75].time=1;
+
+	/*	mov @rx, #imm8	*/
+	opcodes[0x76].f=mov_at_rx_imm8;
+	opcodes[0x76].time=1;
+	opcodes[0x77]=opcodes[0x76];
+
+	/*	mov @rx, a	*/
+	opcodes[0xF6].f=mov_at_rx_a;
+	opcodes[0xF6].time=1;
+	opcodes[0xF7]=opcodes[0xF6];
+
+	/*	mov @rx, addr	*/
+	opcodes[0xA6].f=mov_at_rx_addr;
+	opcodes[0xA6].time=2;
+	opcodes[0xA7]=opcodes[0xA6];
+
+	/*	mov a, @rx	*/
+	opcodes[0xE6].f=mov_a_at_rx;
+	opcodes[0xE6].time=1;
+	opcodes[0xE7]=opcodes[0xE6];
+
+	/*	mov a, addr	*/
+	opcodes[0xE5].f=mov_a_addr;
+	opcodes[0xE5].time=1;
+
+
+
 }
 
 
@@ -464,7 +560,7 @@ void init_ret_instructions(void)
 	/*	ret	*/
 	opcodes[0x22].f=ret;
 	opcodes[0x22].time=2;
-
+	/*	reti	*/
 	opcodes[0x32].f=reti;
 	opcodes[0x32].time=2;
 }
