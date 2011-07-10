@@ -164,6 +164,16 @@ void write_Acc(char data)
 	data_memory[Acc]=data;
 }
 
+void write_carry(int data)
+{
+	data&=1;
+	if (data)
+		set_bit(CARRY);
+	else
+		clr_bit(CARRY);
+
+}
+
 
 /*	So, bit adressable memory is inside (0x20; 0x2F) and (0x80; 0xF8)
  *	Between 0x20 and 0x2F is adressable each bit.
@@ -236,7 +246,6 @@ int test_bit(unsigned char addr)
 	bit=addr_to_bit_bit(addr);
 	return(data_memory[byte]&(1<<bit));
 }
-/*		</TODO: test this stuff>	*/
 
 /*		</API for instructions>		*/
 
@@ -273,7 +282,6 @@ void init_machine(void)
 
 /*	TODO:	external, second timer	*/
 
-/*	FIXME:	Do not use this macros	*/
 
 inline int timer_0_mode(void)
 {
