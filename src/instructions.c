@@ -120,10 +120,98 @@ void mov_a_addr(unsigned short idx)
 
 	addr=read_code(idx+1);
 	write_Acc(read_data(addr));
-	PC++;
+	PC+=2;
+}
+void mov_addr_a(unsigned short idx)
+{
+	unsigned char addr;
+
+	addr=read_code(idx+1);
+	write_data(addr, read_Acc());
+	PC+=2;
+}
+void mov_c_addr(unsigned short idx)
+{
+	int bit;
+	unsigned char addr;
+
+	addr=read_code(idx+1);
+	bit=test_bit(addr);
+	write_carry(bit);
+
+	PC+=2;
+}
+void mov_addr_c(unsigned short idx)
+{
+	int bit;
+	unsigned char addr;
+
+	bit=test_bit(CARRY);
+	addr=read_code(idx+1);
+	if (bit)
+		set_bit(addr);
+	else
+		clr_bit(addr);
+	PC+=2;
 }
 
+void mov_dptr_imm16(unsigned short idx)
+{
+	write_data(DPH, read_code(idx+1));
+	write_data(DPL, read_code(idx+2));
+	PC+=3;
+}
+void mov_addr_imm8(unsigned short idx)
+{
+	unsigned char addr;
+	unsigned char data;
 
+	addr=read_code(idx+1);
+	data=read_code(idx+2);
+	write_data(addr, data);
+	PC+=3;
+}
+void mov_addr_at_rx(unsigned short idx)
+{
+	unsigned char src;
+	unsigned char dest;
+
+	dest=read_code(idx+1);
+	src=read_register(read_code(idx)&0x01);
+	write_data(dest, read_data(src));
+	PC+=2;
+}
+void mov_addr_addr(unsigned short idx)
+{
+	unsigned char src;
+	unsigned char dest;
+	unsigned char data;
+
+	src=read_code(idx+1);
+	dest=read_code(idx+2);
+	data=read_data(src);
+	write_data(dest, data);
+	PC+=3;
+}
+
+void movc_a_code_dptr(unsigned short idx)
+{
+	unsigned short addr;
+	unsigned char data;
+
+	addr=read_data(DPH)<<8;
+	addr|=read_data(DPL);
+
+	data=read_code(addr);
+	write_Acc(data);
+	PC++;
+}
+void movc_a_code_pc(unsigned short idx)
+{
+	idx+=read_Acc();
+	write_Acc(read_code(idx));
+	PC++;
+}
 
 /*		</mov instructions>		*/
 
@@ -368,10 +456,11 @@ void pop_addr(unsigned short idx)
 
 void empty(unsigned short idx)
 {
-	fprintf(stderr, "[emux]\tunknown instruction on %d\n", idx);
+	fprintf(stderr, "[emux]\tunknown instruction at %u\n", idx);
 	fprintf(stderr, "[emux]\t\topcode: 0x%x\n", read_code(idx));
 	exit(1);
 }
+
 /******************************************************************************/
 /*				INITIALIZATION				      */
 /******************************************************************************/
@@ -397,22 +486,12 @@ void init_mov_instructions(void)
 		opcodes[i].f=mov_addr_rx;
 		opcodes[i].time=2;
 	}
-/*	opcodes[0x88].f=mov_addr_rx;
-	opcodes[0x88].time=2;
-	opcodes[0x8C]=opcodes[0x8B]=opcodes[0x8A]=opcodes[0x89]=opcodes[0x88];
-	opcodes[0x8F]=opcodes[0x8E]=opcodes[0x8D]=opcodes[0x88];
-*/
+
 	/*	mov rx, addr	*/
 	for (i=0xA8; i<=0xAF; i++) {
 		opcodes[i].f=mov_rx_addr;
 		opcodes[i].time=2;
 	}
-/*
-	opcodes[0xA8].f=mov_rx_addr;
-	opcodes[0xA8].time=2;
-	opcodes[0xAC]=opcodes[0xAB]=opcodes[0xAA]=opcodes[0xA9]=opcodes[0xA8];
-	opcodes[0xAF]=opcodes[0xAE]=opcodes[0xAD]=opcodes[0xA8];
-*/
 
 	/*	mov rx, #imm8	*/
 	for (i=0x78; i<=0x7F; i++) {
@@ -447,6 +526,39 @@ void init_mov_instructions(void)
 	/*	mov a, addr	*/
 	opcodes[0xE5].f=mov_a_addr;
 	opcodes[0xE5].time=1;
+
+	/*	mov c, addr	*/
+	opcodes[0xA2].f=mov_c_addr;
+	opcodes[0xA2].time=2;
+
+	/*	mov addr, c	*/
+	opcodes[0x92].f=mov_addr_c;
+	opcodes[0x92].time=2;
+
+	/*	mov dptr, #imm16*/
+	opcodes[0x90].f=mov_dptr_imm16;
+	opcodes[0x90].time=2;
+
+	/*	mov addr, #imm8	*/
+	opcodes[0x75].f=mov_addr_imm8;
+	opcodes[0x75].time=2;
+
+	/*	mov addr, @rx	*/
+	opcodes[0x86].f=mov_addr_at_rx;
+	opcodes[0x86].time=2;
+	opcodes[0x86]=opcodes[0x86];
+
+	/*	mov addr, addr	*/
+	opcodes[0x85].f=mov_addr_addr;
+	opcodes[0x86].time=2;
+
+	/*	mov a, @a+dptr	*/
+	opcodes[0x93].f=movc_a_code_dptr;
+	opcodes[0x93].time=2;
+
+	/*	mov a, @a+pc	*/
+	opcodes[0x83].f=movc_a_code_pc;
+	opcodes[0x83].time=2;
 
 
 
