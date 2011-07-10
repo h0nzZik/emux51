@@ -21,13 +21,15 @@
 #define TH1	0x8D
 #define PSW	0xD0
 #define Acc	0xE0
+#define DPH	0x83
+#define DPL	0x82
 
 /****************************************/
 /*		bit adresses		*/
 /****************************************/
 
 /*	general bit adreseses	*/
-#define CARRY	(PSW-0x80+0x07)
+#define CARRY	0xD7
 
 /*	port bit adresses	*/
 #define P0(x) (0x80 + x)
@@ -83,8 +85,6 @@
 
 
 
-extern FILE *async;
-
 
 /*	control variables	*/
 
@@ -125,9 +125,11 @@ inline unsigned char read_Acc(void);
 inline void write_Acc(char data);
 
 /*	operations with bit adress	*/
-inline int test_bit(unsigned char addr);
-inline void set_bit(unsigned char addr);
-inline void clr_bit(unsigned char addr);
+int test_bit(unsigned char addr);
+void set_bit(unsigned char addr);
+void clr_bit(unsigned char addr);
+
+void write_carry(int data);
 
 /*	stack operations	*/
 void push(unsigned char data);
