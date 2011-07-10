@@ -68,7 +68,7 @@ typedef struct DLIST {
 
 
 int module_new(char *path);
-int module_destroy(unsigned int id);
+int module_destroy(module_t *mod, const char *reason);
 
 void module_import_port(int port);
 void module_export_port(int port);

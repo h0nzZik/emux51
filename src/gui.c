@@ -68,9 +68,9 @@ static void mw_destroy(GtkWidget *widget, gpointer data)
 
 /*			file load			*/
 
-#define FILE_LABEL_LEN 20
 static void set_file_label(const char *str)
 {
+#if 1
 	int len;
 	char buff[FILE_LABEL_LEN+4];
 
@@ -82,15 +82,14 @@ static void set_file_label(const char *str)
 		sprintf(buff, "%s", str);
 	}
 	gtk_label_set_text(GTK_LABEL(file_label), buff);
+#else
+	char buff[PATH_MAX+10];
+	sprintf(buff, "[emux51]\t%s", str);
+	gtk_window_set_title(GTK_WINDOW(window), buff);
+#endif
 }
 
-static void init_file_dialog(void)
-{
-	
 
-
-
-}
 
 
 static void file_load(void * data)
@@ -122,7 +121,6 @@ static void file_load(void * data)
 		}
 	}
 	gtk_widget_destroy(file_dialog);
-	init_file_dialog();
 }
 
 
@@ -199,22 +197,21 @@ int gui_run(int *argc, char **argv[])
 
 	mbox=gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(window), mbox);
-
-
+	gtk_container_set_border_width(GTK_CONTAINER(window), 2);
 	/*	file	*/
 	file_label=gtk_label_new("No file loaded.");
+
 	gtk_box_pack_start(GTK_BOX(mbox), file_label, TRUE, TRUE, 0);
 
 	file_hbox=gtk_hbox_new(FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(mbox), file_hbox, TRUE, TRUE, 0);
 
 	file_button=gtk_button_new_with_label("Load");
-	gtk_box_pack_start(GTK_BOX(file_hbox), file_button, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(file_hbox), file_button, TRUE, FALSE, 0);
 
 	file_reload=gtk_button_new_with_label("Reload");
-	gtk_box_pack_start(GTK_BOX(file_hbox), file_reload, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(file_hbox), file_reload, TRUE, FALSE, 0);
 
-	init_file_dialog();
 	g_signal_connect(file_button, "clicked", G_CALLBACK(file_load), NULL);
 	g_signal_connect(file_reload, "clicked", G_CALLBACK(reload), NULL);
 
@@ -268,13 +265,27 @@ void gui_callback(void)
 /*	gdk_threads_leave();*/
 }
 
-int gui_add(void *object)
+
+static gboolean 
+gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * data)
+{
+	module_destroy(data, "You were killed dude");
+	printf("killed\n");
+
+	return FALSE;
+}
+
+int gui_add(void *object, void *module)
 {
 	GtkWidget *window;
 
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), "module window\n");
 	gtk_container_add(GTK_CONTAINER(window), object);
+	printf("gui_add: module == %p\n", module);
+	printf("*module == %p\n", *((int *)module));
+	g_signal_connect(window, "delete-event",
+			G_CALLBACK(gui_module_delete_event), module);
 
 	gtk_widget_show_all(window);
 

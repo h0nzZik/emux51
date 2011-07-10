@@ -22,7 +22,7 @@ module_t modules[MODULE_CNT];
 
 
 
-inline int test_module_id(modid_t modid)
+static inline int test_module_id(modid_t modid)
 {
 	if (modid.id >= MODULE_CNT)
 		return -1;
@@ -35,7 +35,7 @@ inline int test_module_id(modid_t modid)
 
 
 
-int module_load(char *path, module_t *mod)
+static int module_load(char *path, module_t *mod)
 {
 	mod->id.handle=load_lib(path);
 	if (mod->id.handle == NULL) {
@@ -249,7 +249,6 @@ void module_export_port(int port)
 	}
 }
 
-/*	called from commands	*/
 int module_new(char *path)
 {
 	int i;
@@ -288,18 +287,24 @@ int module_new(char *path)
 	mod_rval=mod->f.init(mod->id, &mod->callbacks);
 
 	if (mod_rval != NULL)
-		gui_add(mod_rval);
+		gui_add(mod_rval, mod);
 
 	return mod->id.id;
 }
 
-int module_destroy(unsigned int id)
+int module_destroy(module_t *mod, const char *reason)
 {
-	if (id<0 || id>=MODULE_CNT) {
+	if (mod == NULL) {
+		printf("[emux]\ttrying to kill NULL\n");
 		return -1;
 	}
-	modules[id].f.exit("users choice");
-	close_lib(modules[id].id.handle);
+	mod->f.exit(reason);
+/*		TODO: free alloced bits	*/
+
+	close_lib(mod->id.handle);
+	memset(mod, 0, sizeof(module_t));	
+
+	printf("[emux]\tmodule killed\n");
 	return 0;
 }
 
