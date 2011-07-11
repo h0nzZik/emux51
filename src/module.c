@@ -216,6 +216,12 @@ int handle_event(modid_t modid, const char *event, void (*handle)())
 	return 0;
 }
 
+
+int emulator_state(void)
+{
+	return running;
+}
+
 /*******************************************************************************
  *		</API for modules>
  ******************************************************************************/
@@ -315,5 +321,6 @@ int modules_init(void)
 	return 0;
 
 }
+
 
 /*			</emulator API>				*/

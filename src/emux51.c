@@ -85,7 +85,7 @@ void write_port(int port, char data)
 {
 	char old;
 
-	old=read_port(port);
+	old=port_collectors[port];
 	port_collectors[port]=port_latches[port]&data;
 	data_memory[port_to_addr(port)]=port_collectors[port];
 	port_fall[port]=old&~read_port(port);
@@ -607,7 +607,7 @@ void data_dump(char *buffer)
 		sprintf(buffer, "%X0\t", i);
 		buffer+=3;
 		for (j=0; j<16; j++) {
-			sprintf(buffer, "%02x\t", data_memory[16*i+j]);
+			sprintf(buffer, "%02X\t", data_memory[16*i+j]);
 			buffer+=3;
 		}
 		for (j=0; j<16; j++) {
@@ -625,12 +625,10 @@ void data_dump(char *buffer)
 }
 
 
-
-
-
 int main(int argc, char *argv[])
 {
 	printf("[emux]\tstarting..\n");
+
 	init_instructions();
 	init_machine();
 

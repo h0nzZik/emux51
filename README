@@ -22,6 +22,9 @@
 *	Timer interrupts are ok.					*
 *	External interrupts are broken and disabled.			*
 
+		Modules:
+*	Leds								*
+*	Switches							*
 
 		TODO:
 *	Fix external interrupts.					*

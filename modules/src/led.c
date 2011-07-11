@@ -20,7 +20,7 @@ char port_data[4];
 #define LED_COUNT 8
 #define LED_RADIUS 16
 
-/*		leds are nombered from left to right	*/
+/*		leds are numbered from left to right	*/
 void led_set(GtkWidget *da, int led, int state)
 {
 	GdkColor color;
@@ -140,8 +140,13 @@ void * module_init(modid_t modid, void *cbs)
 	if (f->handle_event(id, "read", module_read)){
 		printf("error 'handling'");
 		return NULL;
+	}/*
+	for(i=0; i<4; i++) {
+		module_read(i);
 	}
+*/
 	printf("[led]\tinit ok\n");
 
+	gtk_widget_show_all(main_box);
 	return (void *) main_box;
 }

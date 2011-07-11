@@ -34,7 +34,8 @@ GtkWidget *mod_load_button;
 /*	16 lines * 80 bytes per line	*/
 char dumped_text[80*16];
 
-
+char last_module_dir[PATH_MAX];
+char last_hexfile_dir[PATH_MAX];
 
 static void gui_set_stop(void)
 {
@@ -282,12 +283,11 @@ int gui_add(void *object, void *module)
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), "module window\n");
 	gtk_container_add(GTK_CONTAINER(window), object);
-	printf("gui_add: module == %p\n", module);
-	printf("*module == %p\n", *((int *)module));
 	g_signal_connect(window, "delete-event",
 			G_CALLBACK(gui_module_delete_event), module);
 
-	gtk_widget_show_all(window);
+/*	gtk_widget_show_all(window);*/
+	gtk_widget_show(window);
 
 	return 0;
 }
