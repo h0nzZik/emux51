@@ -1,33 +1,53 @@
-# Makefile
-
+# Makefile for linux and linux to windows cross-compiling
 CFLAGS=-Wall -O2
+INCLUDE=-I include
 
-targets=instructions emux51 module hex
-objects=.obj/instructions.o .obj/emux51.o .obj/arch.o .obj/module.o \
-	.obj/hex.o .obj/gui.o
+ifeq (${ARCH}, WIN32)
+	PKG-CONFIG=mingw32-pkg-config
+	archsrc=win32.c
+	CC=i686-pc-mingw32-gcc
+	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm
+	OBJ=.wobj
+	OUT=bin/emux51.exe
+	LOG=log/log-win.txt
+else
+	PKG-CONFIG=pkg-config
+	archsrc=posix.c
+	LDFLAGS=`${PKG-CONFIG} --libs gtk+-2.0 gthread-2.0`
+	OBJ=.obj
+	OUT=bin/emux51
+	LOG=log/log
+endif
 
-ARCH=posix
+targets=instructions emux51 module hex settings
+objects=${OBJ}/instructions.o ${OBJ}/emux51.o ${OBJ}/arch.o ${OBJ}/module.o \
+	${OBJ}/hex.o ${OBJ}/gui.o ${OBJ}/settings.o
+
 
 .PHONY: clean
 
 build:	${targets} arch gui
-	${CC} -lpthread `pkg-config --libs gtk+-2.0 gthread-2.0` -ldl ${objects} -o bin/emux51 >> log
+	${CC} ${objects} ${LDFLAGS} -o ${OUT} >> ${LOG}
 
 ${targets}:
-	${CC} -I include -c ${CFLAGS} -o .obj/$@.o src/$@.c 2>>log
+	${CC} ${INCLUDE} -c ${CFLAGS} -o ${OBJ}/$@.o src/$@.c 2>>${LOG}
 
 arch:	
-	${CC} -I include -c ${CFLAGS} -o .obj/arch.o src/arch/${ARCH}.c 2>>log
+	${CC} ${INCLUDE} -c ${CFLAGS} -o ${OBJ}/arch.o src/arch/${archsrc} 2>>${LOG}
 	
 gui:
-	${CC} -I include -c ${CFLAGS} `pkg-config --cflags gtk+-2.0`\
-	-o .obj/gui.o src/gui.c 2>>log
-
+	${CC} ${INCLUDE} -c ${CFLAGS} `${PKG-CONFIG} --cflags gtk+-2.0`\
+	-o ${OBJ}/gui.o src/gui.c 2>>${LOG} 
 mods:
 	make --makefile=modules/Makefile
 
 clean:
-	>log
-	rm .obj/*
-	rm bin/*
-
+	rm -f ${LOG}
+	rm -f ${OBJ}/*
+	rm -f ${OUT}
+cleanall:
+	rm -f log/*
+	rm -f .obj/*
+	rm -f .wobj/*
+	rm -f bin/*
+	

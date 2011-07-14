@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <pthread.h>
 #include <signal.h>
 #include <ctype.h>
 

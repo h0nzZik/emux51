@@ -213,6 +213,8 @@ void movc_a_code_pc(unsigned short idx)
 	PC++;
 }
 
+
+
 /*		</mov instructions>		*/
 
 
@@ -299,6 +301,16 @@ void cpl_addr(unsigned short idx)
 		set_bit(addr);
 	}
 	PC+=2;
+}
+void cpl_c(unsigned short idx)
+{
+	neg_bit(CARRY);
+	PC++;
+}
+void cpl_a(unsigned short idx)
+{
+	write_Acc(~read_Acc());
+	PC++;
 }
 /*		</clr instructions>		*/
 
@@ -453,6 +465,137 @@ void pop_addr(unsigned short idx)
 	PC+=2;
 }
 
+
+
+/*	aritmetic instructions	*/
+void add_a_imm8(unsigned short idx)
+{
+	unsigned char increment;
+
+	increment=read_code(idx+1);
+	increment+=read_code(idx)&0x10;
+	add_Acc(increment);
+	PC+=2;
+}
+void add_a_addr(unsigned short idx)
+{
+	unsigned char increment;
+
+	increment=read_data(read_code(idx+1));
+	increment+=read_code(idx)&0x10;
+	add_Acc(increment);
+	PC+=2;
+}
+void add_a_at_rx(unsigned short idx)
+{
+	unsigned char increment;
+
+	increment=read_data(read_register(read_code(idx)&0x01));
+	increment+=read_code(idx)&0x10;
+	add_Acc(increment);
+	PC++;
+}
+
+void add_a_rx(unsigned short idx)
+{
+	unsigned char increment;
+
+	increment=read_register(read_code(idx)&0x07);
+	increment+=read_code(idx)&0x10;
+	add_Acc(increment);
+	PC++;
+}
+
+void anl_a_addr(unsigned short idx)
+{
+	unsigned char data;
+
+	data=read_data(read_code(idx+1));
+	data&=read_Acc();
+	write_Acc(data);
+	PC+=2;
+}
+void anl_addr_a(unsigned short idx)
+{
+	unsigned char data;
+	unsigned char addr;
+
+	addr=read_code(idx+1);
+	data=read_data(addr);
+	data&=read_Acc();
+	write_data(addr, data);
+	PC+=2;
+}
+void anl_a_imm8(unsigned short idx)
+{
+	unsigned char mask;
+	unsigned char acc;
+
+	mask=read_code(idx+1);
+	acc=read_Acc();
+	acc&=mask;
+	write_Acc(acc);
+	PC+=2;
+}
+void anl_a_at_rx(unsigned short idx)
+{
+	unsigned char mask;
+	unsigned char acc;
+
+	mask=read_data(read_register(read_code(idx)&0x01));
+	acc=read_Acc();
+	acc&=mask;
+	write_Acc(acc);
+	PC++;
+}
+
+void anl_a_rx(unsigned short idx)
+{
+	unsigned char mask;
+	unsigned char acc;
+
+	mask=read_register(read_code(idx)&0x07);
+	acc=read_Acc();
+	acc&=mask;
+	write_Acc(acc);
+	PC++;
+}
+void anl_addr_imm8(unsigned short idx)
+{
+	unsigned char addr;
+	unsigned char mask;
+	unsigned char data;
+
+	addr=read_code(idx+1);
+	mask=read_code(idx+2);
+	data=read_data(addr);
+	data&=mask;
+	write_data(addr, mask);
+	PC+=3;
+}
+void anl_c_addr(unsigned short idx)
+{
+	int bit;
+	int c;
+
+	bit=test_bit(read_code(idx+1));
+	c=test_bit(CARRY);
+	c&=bit;
+	write_carry(c);
+	PC+=2;
+}
+void anl_c_naddr(unsigned short idx)
+{
+	int bit;
+	int c;
+
+	bit=test_bit(read_code(idx+1));
+	c=!test_bit(CARRY);
+	c&=bit;
+	write_carry(c);
+	PC+=2;
+
+}
 
 void empty(unsigned short idx)
 {
@@ -648,6 +791,12 @@ void init_cpl(void)
 	opcodes[0xB2].f=cpl_addr;
 	opcodes[0xB2].time=1;
 
+	opcodes[0xB3].f=cpl_c;
+	opcodes[0xB3].time=1;
+
+	opcodes[0xF4].f=cpl_a;
+	opcodes[0xF4].time=1;
+
 }
 
 void init_bit_cond_jumps(void)
@@ -665,8 +814,6 @@ void init_bit_cond_jumps(void)
 
 }
 
-/*	TODO: RETI	*/
-
 void init_ret_instructions(void)
 {
 	/*	ret	*/
@@ -677,7 +824,70 @@ void init_ret_instructions(void)
 	opcodes[0x32].time=2;
 }
 
+void init_aritm_instructions(void)
+{
+	int i;
 
+	/*	add	*/
+
+	opcodes[0x24].f=add_a_imm8;
+	opcodes[0x24].time=1;
+
+	opcodes[0x25].f=add_a_addr;
+	opcodes[0x25].time=1;
+
+	opcodes[0x26].f=add_a_at_rx;
+	opcodes[0x26].time=1;
+	opcodes[0x27]=opcodes[0x26];
+
+	for(i=0x28; i<0x30; i++) {
+		opcodes[i].f=add_a_rx;
+		opcodes[i].time=1;
+	}
+
+	/*	addc	*/
+	opcodes[0x34].f=add_a_imm8;
+	opcodes[0x34].time=1;
+
+	opcodes[0x35].f=add_a_addr;
+	opcodes[0x35].time=1;
+
+	opcodes[0x36].f=add_a_at_rx;
+	opcodes[0x36].time=1;
+	opcodes[0x37]=opcodes[0x26];
+
+	for(i=0x38; i<0x40; i++) {
+		opcodes[i].f=add_a_rx;
+		opcodes[i].time=1;
+	}
+
+	opcodes[0x52].f=anl_addr_a;
+	opcodes[0x52].time=1;
+
+	opcodes[0x53].f=anl_addr_imm8;
+	opcodes[0x53].time=2;
+
+	opcodes[0x54].f=anl_a_imm8;
+	opcodes[0x54].time=1;
+
+	opcodes[0x55].f=anl_a_addr;
+	opcodes[0x55].time=1;
+
+	opcodes[0x56].f=anl_a_at_rx;
+	opcodes[0x56].time=1;
+	opcodes[0x57]=opcodes[0x56];
+
+	for(i=0x58; i<0x60; i++) {
+		opcodes[i].f=anl_a_rx;
+		opcodes[i].time=1;
+	}
+
+	opcodes[0x81].f=anl_c_addr;
+	opcodes[0x81].time=2;
+
+	opcodes[0xB0].f=anl_c_naddr;
+	opcodes[0xB0].time=2;
+}
 
 
 
@@ -698,5 +908,6 @@ void init_instructions(void)
 	init_setb();
 	init_cpl();
 	init_bit_cond_jumps();
+	init_aritm_instructions();
 }
 

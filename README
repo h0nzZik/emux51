@@ -21,12 +21,14 @@
 *	Simple graphic interface.					*
 *	Timer interrupts are ok.					*
 *	External interrupts are broken and disabled.			*
+*	make ARCH=WIN32 perform cross-compiling to WIN32 architecture	*/
 
 		Modules:
 *	Leds								*
 *	Switches							*
 
 		TODO:
+*	!! PSW not implemented yet. Do it!!				*
 *	Fix external interrupts.					*
 *	Improve UI.							*
 *	Do a lot of instructions.					*
@@ -35,18 +37,7 @@
 
 
 		Actual instruction set:
-*	mov	a, rx
-*	mov	rx, a
-*	mov	addr, rx
-*	mov	rx, addr
-*	mov	rx, #imm8
-*	mov	@ri, a
-*	mov	@ri, addr
-*	mov	@ri, #imm8
-*	mov	a, @ri
-*	mov	a, addr
-*	mov	a, #imm8
-*
+*	All 'mov' and 'movc' instructions. Movx are ignored now ;)
 *	lcall	addr
 *	acall	addr
 *

@@ -83,8 +83,19 @@
 #define ET1_ADDR	0x001B
 #define SER_ADDR	0x0023
 
+#if 0
+/*	emulator data types	*/
+typedef unsigned char	data8;
+typedef unsigned short	data16;
+typedef unsigned long	data32;
 
+typedef unsigned char	ptr8;
+typedef unsigned short	ptr16;
+typedef unsigned long	ptr32;
 
+typedef ptr16 cptr;
+typedef ptr8  dptr;
+#endif
 
 /*	control variables	*/
 
@@ -121,13 +132,16 @@ inline unsigned char read_code(unsigned addr);
 inline void write_code(unsigned addr, char data);
 
 /*	operations with Acc		*/
-inline unsigned char read_Acc(void);
-inline void write_Acc(char data);
+unsigned char read_Acc(void);
+void write_Acc(char data);
+void add_Acc(unsigned char increment);
+
 
 /*	operations with bit adress	*/
 int test_bit(unsigned char addr);
 void set_bit(unsigned char addr);
 void clr_bit(unsigned char addr);
+void neg_bit(unsigned char addr);
 
 void write_carry(int data);
 

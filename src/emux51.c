@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <limits.h>
 
+#include <settings.h>
 #include <emux51.h>
 #include <instructions.h>
 #include <module.h>
@@ -32,9 +33,6 @@ unsigned char code_memory[CODE_LENGHT];
 unsigned char data_memory[DATA_LENGHT];
 
 unsigned short PC;
-
-/*	FIXME: remove	*/
-unsigned short *DPTR=(void *)(&data_memory[0x82]);
 
 
 /*	some port variables	*/
@@ -98,8 +96,9 @@ void write_port(int port, char data)
 /*		</API for module.c>		*/
 
 
-
-/*		<API for instructions>		*/
+/*	*	*	*	*	*	*	*	*	*/
+/*			<API for instructions>				*/
+/*	*	*	*	*	*	*	*	*	*/
 unsigned char read_data(unsigned addr)
 {
 	if(FORCE_READ && isport(addr)){
@@ -155,6 +154,8 @@ void write_register(int reg, char data)
 	data_memory[reg_to_addr(reg)]=data;
 }
 
+/*	Acumulator operations	*/
+
 unsigned char read_Acc(void)
 {
 	return(data_memory[Acc]);
@@ -162,7 +163,19 @@ unsigned char read_Acc(void)
 void write_Acc(char data)
 {
 	data_memory[Acc]=data;
+}void add_Acc(unsigned char increment)
+{
+	unsigned char acc;
+	unsigned int sum;
+
+	acc=read_Acc();	
+	sum=acc+increment;
+	write_carry(sum>255);
+	write_Acc((unsigned char) sum);
 }
+
+
+
 
 void write_carry(int data)
 {
@@ -247,7 +260,9 @@ int test_bit(unsigned char addr)
 	return(data_memory[byte]&(1<<bit));
 }
 
-/*		</API for instructions>		*/
+/*	*	*	*	*	*	*	*	*	*/
+/*			</API for instructions>				*/
+/*	*	*	*	*	*	*	*	*	*/
 
 
 
@@ -357,8 +372,6 @@ static inline void update_timer_0(void)
 		case 1:
 		if ((data_memory[TH0] == 0) && (data_memory[TL0] == 0)){
 			neg_bit(TF0);
-/*			data_memory[TCON]^=0x20;*/
-/*			set_bit(TF0);	*/
 		}
 		break;
 		case 2:
@@ -610,6 +623,7 @@ void data_dump(char *buffer)
 			sprintf(buffer, "%02X\t", data_memory[16*i+j]);
 			buffer+=3;
 		}
+#if DUMP_ASCII
 		for (j=0; j<16; j++) {
 			if (isprint(data_memory[16*i+j])) {
 				c=(char)data_memory[16*i+j];
@@ -619,6 +633,7 @@ void data_dump(char *buffer)
 			*buffer++=c;
 		}
 		*buffer++='\t';
+#endif
 		*buffer++='\n';
 	}
 
