@@ -1,3 +1,6 @@
+/*	TODO: test directory	*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +11,7 @@
 #include <gdk/gdk.h>
 
 #include <module.h>
+#include <settings.h>
 #include <gui.h>
 #include <emux51.h>
 #include <hex.h>
@@ -97,6 +101,7 @@ static void file_load(void * data)
 {
 	int rval;
 	char *fname;
+	char *dirname;
 
 	gui_set_stop();
 
@@ -106,12 +111,20 @@ static void file_load(void * data)
 				GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(file_dialog), GTK_RESPONSE_OK);
 
+	dirname=config_read("hex_directory");
+	if(dirname) {
+		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(file_dialog), dirname);
+		free(dirname);
+	}
+
 	rval=gtk_dialog_run(GTK_DIALOG(file_dialog));
 	if (rval == GTK_RESPONSE_OK) {
 		fname=gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(file_dialog));
+		dirname=gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(file_dialog));
 		if (load_hex(fname, code_memory, CODE_LENGHT) == 0) {
 			strncpy(hexfile, fname, PATH_MAX);
-			set_file_label(fname);
+			/*	set only file name as label	*/
+			set_file_label(fname+strlen(dirname)+1);
 			do_reset();
 			refresh_dump();
 			loaded=1;
@@ -167,12 +180,20 @@ static void gui_mod_ld(void *data)
 	GtkWidget *dialog;
 	char *fname;
 	int rval;
+	char *dir;
 
 	dialog=gtk_file_chooser_dialog_new("Select module", NULL,
 			GTK_FILE_CHOOSER_ACTION_OPEN,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 			GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+	/*	try to set	*/
+	dir=config_read("module_directory");
+	if (dir){
+		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), dir);
+		free(dir);
+	}
+
 	rval=gtk_dialog_run(GTK_DIALOG(dialog));
 	if (rval == GTK_RESPONSE_OK) {
 		fname=gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
@@ -208,10 +229,10 @@ int gui_run(int *argc, char **argv[])
 	gtk_box_pack_start(GTK_BOX(mbox), file_hbox, TRUE, TRUE, 0);
 
 	file_button=gtk_button_new_with_label("Load");
-	gtk_box_pack_start(GTK_BOX(file_hbox), file_button, TRUE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(file_hbox), file_button, TRUE, TRUE, 0);
 
 	file_reload=gtk_button_new_with_label("Reload");
-	gtk_box_pack_start(GTK_BOX(file_hbox), file_reload, TRUE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(file_hbox), file_reload, TRUE, TRUE, 0);
 
 	g_signal_connect(file_button, "clicked", G_CALLBACK(file_load), NULL);
 	g_signal_connect(file_reload, "clicked", G_CALLBACK(reload), NULL);
@@ -241,9 +262,9 @@ int gui_run(int *argc, char **argv[])
 	gtk_widget_show_all(window);
 	gtk_widget_show_all(dump_window);
 
-	gdk_threads_enter();
+/*	gdk_threads_enter();*/
 	gtk_main();
-	gdk_threads_leave();
+/*	gdk_threads_leave();*/
 	return 0;
 }
 
@@ -271,7 +292,6 @@ static gboolean
 gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * data)
 {
 	module_destroy(data, "You were killed dude");
-	printf("killed\n");
 
 	return FALSE;
 }
