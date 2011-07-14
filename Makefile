@@ -6,7 +6,7 @@ ifeq (${ARCH}, WIN32)
 	PKG-CONFIG=mingw32-pkg-config
 	archsrc=win32.c
 	CC=i686-pc-mingw32-gcc
-	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm
+	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm -mwindows
 	OBJ=.wobj
 	OUT=bin/emux51.exe
 	LOG=log/log-win.txt
