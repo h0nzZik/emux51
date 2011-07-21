@@ -117,7 +117,7 @@ void * module_init(modid_t modid, void *cbs)
 	main_box=gtk_vbox_new(FALSE, 0);
 
 	for (i=0; i<4; i++) {
-/*		port_data[i]=f->read_port(id, i);*/
+		port_data[i]=f->read_port(id, i);
 
 		boxes[i]=gtk_hbox_new(FALSE, 0);
 		gtk_box_pack_start(GTK_BOX(main_box), boxes[i], TRUE, TRUE, 0);

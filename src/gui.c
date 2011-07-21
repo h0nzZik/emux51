@@ -1,6 +1,3 @@
-/*	TODO: test directory	*/
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,12 +28,17 @@ GtkWidget *dump_window;
 GtkWidget *dump_vbox;
 GtkWidget *dump_body;
 
-
 GtkWidget *mod_load_button;
+
+/*	menu stuff	*/
+GtkItemFactory *itf;
+GtkWidget *itf_widget;
+GtkAccelGroup *accel_group;
 
 
 /*	16 lines * 80 bytes per line	*/
 char dumped_text[80*16];
+int dump_visible=1;
 
 char last_module_dir[PATH_MAX];
 char last_hexfile_dir[PATH_MAX];
@@ -75,7 +77,6 @@ static void mw_destroy(GtkWidget *widget, gpointer data)
 
 static void set_file_label(const char *str)
 {
-#if 1
 	int len;
 	char buff[FILE_LABEL_LEN+4];
 
@@ -87,17 +88,12 @@ static void set_file_label(const char *str)
 		sprintf(buff, "%s", str);
 	}
 	gtk_label_set_text(GTK_LABEL(file_label), buff);
-#else
-	char buff[PATH_MAX+10];
-	sprintf(buff, "[emux51]\t%s", str);
-	gtk_window_set_title(GTK_WINDOW(window), buff);
-#endif
 }
 
 
 
 
-static void file_load(void * data)
+static void file_load(void *data)
 {
 	int rval;
 	char *fname;
@@ -203,9 +199,35 @@ static void gui_mod_ld(void *data)
 
 }
 
+static void dump_view(gpointer data, guint action, GtkWidget *button)
+{
+	int active;
+
+	active=gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(button));
+
+	if (active)
+		gtk_widget_show(dump_window);
+	else
+		gtk_widget_hide(dump_window);
+
+	dump_visible=active;	
+}
+
+
+/*		MENU		*/
+static GtkItemFactoryEntry items[]={
+{ "/File", NULL, NULL, 0, "<Branch>" },
+{ "/File/_Open HEX","<control>O", file_load, 0, "<StockItem>", GTK_STOCK_OPEN},
+{ "/File/_Load Module", "<CTRL>L", gui_mod_ld, 0, "<StockItem>", GTK_STOCK_OPEN},
+{ "/File/_Quit", "<CTRL>Q", mw_destroy,	0, "<StockItem>", GTK_STOCK_QUIT},
+{ "/View", NULL, NULL, 0, "<Branch>"},
+{ "/View/_Dump", NULL, dump_view, 0, "<CheckItem>"}
+};
+int nitems=sizeof(items)/sizeof(items[0]);
 
 int gui_run(int *argc, char **argv[])
 {
+
 	gtk_init(argc, argv);
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), " Welcome in Emux51");
@@ -220,9 +242,17 @@ int gui_run(int *argc, char **argv[])
 	mbox=gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(window), mbox);
 	gtk_container_set_border_width(GTK_CONTAINER(window), 2);
+
+	/*	menu	*/
+	accel_group=gtk_accel_group_new();
+	itf=gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<main>", accel_group);
+
+	gtk_item_factory_create_items(itf, nitems, items, NULL);
+	itf_widget=gtk_item_factory_get_widget(itf, "<main>");
+
+	gtk_box_pack_start(GTK_BOX(mbox), itf_widget, FALSE, TRUE, 0);
 	/*	file	*/
 	file_label=gtk_label_new("No file loaded.");
-
 	gtk_box_pack_start(GTK_BOX(mbox), file_label, TRUE, TRUE, 0);
 
 	file_hbox=gtk_hbox_new(FALSE, 0);
@@ -259,32 +289,36 @@ int gui_run(int *argc, char **argv[])
 	dump_body=gtk_label_new(dumped_text);
 	gtk_box_pack_start(GTK_BOX(dump_vbox), dump_body, TRUE, TRUE, 0);
 
-	gtk_widget_show_all(window);
-	gtk_widget_show_all(dump_window);
 
-/*	gdk_threads_enter();*/
+
+	/*	keyboard shortcuts for both windows	*/
+	gtk_window_add_accel_group(GTK_WINDOW(dump_window), accel_group);
+	gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
+
+	/*	and show	*/
+	gtk_widget_show_all(window);
+	gtk_widget_show_all(dump_vbox);
+
 	gtk_main();
-/*	gdk_threads_leave();*/
 	return 0;
 }
 
 
 void refresh_dump(void)
-{
-	data_dump(dumped_text);
-	gtk_label_set_text(GTK_LABEL(dump_body), dumped_text);
+{	if (dump_visible) {
+		data_dump(dumped_text);
+		gtk_label_set_text(GTK_LABEL(dump_body), dumped_text);
+	}
 }
 
 int gui_counter=0;
 void gui_callback(void)
 {
-/*	gdk_threads_enter();*/
 	if (gui_counter == 10) {
 		gui_counter=0;
 		refresh_dump();
 	}
 	gui_counter++;
-/*	gdk_threads_leave();*/
 }
 
 

@@ -21,14 +21,15 @@
 *	Simple graphic interface.					*
 *	Timer interrupts are ok.					*
 *	External interrupts are broken and disabled.			*
-*	make ARCH=WIN32 perform cross-compiling to WIN32 architecture	*/
+*	make ARCH=WIN32 perform cross-compiling to WIN32 architecture	*
 
 		Modules:
 *	Leds								*
 *	Switches							*
 
 		TODO:
-*	!! PSW not implemented yet. Do it!!				*
+*	!! PSW features not implemented yet. Do it!!			*
+*	env settings							*
 *	Fix external interrupts.					*
 *	Improve UI.							*
 *	Do a lot of instructions.					*

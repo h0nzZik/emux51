@@ -829,7 +829,6 @@ void init_aritm_instructions(void)
 	int i;
 
 	/*	add	*/
-
 	opcodes[0x24].f=add_a_imm8;
 	opcodes[0x24].time=1;
 
@@ -861,6 +860,7 @@ void init_aritm_instructions(void)
 		opcodes[i].time=1;
 	}
 
+	/*	anl	*/
 	opcodes[0x52].f=anl_addr_a;
 	opcodes[0x52].time=1;
 
