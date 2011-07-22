@@ -34,6 +34,8 @@ GtkWidget *mod_load_button;
 GtkItemFactory *itf;
 GtkWidget *itf_widget;
 GtkAccelGroup *accel_group;
+/*	this will be not NULL after first emiting 'delete_event' to dump_window	*/
+GtkWidget *view_dump_menu_button=NULL;
 
 
 /*	16 lines * 80 bytes per line	*/
@@ -61,8 +63,6 @@ static gboolean gui_delete_event(GtkWidget *widget, GdkEvent *event, gpointer da
 {
 	if (widget == window)
 		return FALSE;
-	else if (widget == dump_window)
-		return TRUE;
 	printf("wtf?\n");
 	return TRUE;
 }
@@ -74,7 +74,6 @@ static void mw_destroy(GtkWidget *widget, gpointer data)
 
 
 /*			file load			*/
-
 static void set_file_label(const char *str)
 {
 	int len;
@@ -203,6 +202,8 @@ static void dump_view(gpointer data, guint action, GtkWidget *button)
 {
 	int active;
 
+	view_dump_menu_button=button;
+
 	active=gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(button));
 
 	if (active)
@@ -211,6 +212,13 @@ static void dump_view(gpointer data, guint action, GtkWidget *button)
 		gtk_widget_hide(dump_window);
 
 	dump_visible=active;	
+}
+
+static gboolean dump_destroy(GtkWidget *dwin, gpointer data)
+{
+	gtk_widget_hide(dwin);
+	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(view_dump_menu_button), 0);
+	return TRUE;
 }
 
 
@@ -281,7 +289,7 @@ int gui_run(int *argc, char **argv[])
 	dump_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(dump_window), "Memory dump window");
 	g_signal_connect(dump_window, "delete_event",
-			G_CALLBACK(gui_delete_event), NULL);
+			G_CALLBACK(dump_destroy), NULL);
 
 	dump_vbox=gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(dump_window), dump_vbox);
