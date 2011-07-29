@@ -1,6 +1,6 @@
 #modules/Makefile
 
-target=led switch
+target=led switch 7seg
 includes=-I include 
 cflags=-c -fPIC `pkg-config --cflags gtk+-2.0`
 

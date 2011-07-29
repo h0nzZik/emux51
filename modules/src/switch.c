@@ -53,7 +53,7 @@ static void menu_toggled(GtkToggleButton *button, gpointer data)
 	if (active){
 		rval=f->alloc_bits(id, (int)data, 0xFF);
 		if (rval){
-			printf("[switch]\tcannot alloc port %d\n", (int)data);
+			printf("[switch]\tcannot allocate port %d\n", (int)data);
 			return;
 		}
 		ext_state[(int)data]=0xFF;

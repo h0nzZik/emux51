@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include <limits.h>
 
+#include <signal.h>
+
 #include <settings.h>
 #include <emux51.h>
 #include <instructions.h>
@@ -116,7 +118,7 @@ void write_data(unsigned addr, char data)
 	if(isport(addr)){
 		port=addr_to_port(addr);
 
-		printf("[emux]\twriting 0x%x to port %d\n", data, port);
+		printf("[emux]\twriting 0x%2x to port %d\n", data, port);
 		port_latches[port]=data;
 		port_collectors[port]=data;
 
@@ -639,11 +641,21 @@ void data_dump(char *buffer)
 
 }
 
+void sigint_handler(int data)
+{
+	printf("[emux]\texiting because of SIGINT\n");
+	module_destroy_all("SIGINT");
+	gtk_main_quit();
+
+}
+
 
 int main(int argc, char *argv[])
 {
 	printf("[emux]\tstarting..\n");
 
+	signal(SIGINT, sigint_handler);
+/*	config_load();*/
 	init_instructions();
 	init_machine();
 

@@ -16,10 +16,15 @@ char _configfile[PATH_MAX+3+strlen(CFGNAME)+strlen(CFGDIR)];
 
 char *configfile(void)
 {
-	sprintf(_configfile, "%s/%s/%s", getenv("HOME"), CFGDIR, CFGNAME);
+	char *dir=getenv("HOME");
+
+	if (dir)
+		sprintf(_configfile, "%s/%s/%s", dir, CFGDIR, CFGNAME);
+	else
+		sprintf(_configfile, "./.%s", CFGNAME);
 	return _configfile;
 }
-
+#if 1
 /*	returns value of 'variable'	*/
 char *config_read(char *variable)
 {
@@ -72,5 +77,40 @@ char *config_read(char *variable)
 
 	fclose(fr);
 	return(data);
-
 }
+#endif
+#if 0
+char *config_read(char *variable)
+{
+	char *value;
+
+	value=getenv(variable);
+	printf("%s=%s\n", variable, value);
+	return(value);
+}
+
+int config_load(void)
+{
+	char line[80];
+	int i;
+	FILE *fr;
+
+	fr=fopen(configfile(), "rt");
+	if (fr == NULL)
+		return -1;
+	printf("opened\n");
+	while (fgets(line, 80, fr) != NULL) {
+		i=strlen(line);
+		printf("len == %d\n", i);
+		while (isspace(line[i-1])) {
+			line[--i]='\0';
+		}
+		printf("putenv(\"%s\")\n", line);
+		if (putenv(line)){
+			fprintf(stderr,\
+			"[emux51]\twarning:\tcannot putenv()");
+		}
+	}
+	fclose(fr);
+}
+#endif

@@ -1,3 +1,8 @@
+/*
+ *	TODO:	kill all modules before exit
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +39,7 @@ GtkWidget *mod_load_button;
 GtkItemFactory *itf;
 GtkWidget *itf_widget;
 GtkAccelGroup *accel_group;
-/*	this will be not NULL after first emiting 'delete_event' to dump_window	*/
+/*	this will be set after first emiting 'delete_event' to dump_window	*/
 GtkWidget *view_dump_menu_button=NULL;
 
 
@@ -69,6 +74,7 @@ static gboolean gui_delete_event(GtkWidget *widget, GdkEvent *event, gpointer da
 
 static void mw_destroy(GtkWidget *widget, gpointer data)
 {
+	module_destroy_all();
 	gtk_main_quit();
 }
 
@@ -244,7 +250,6 @@ int gui_run(int *argc, char **argv[])
 	g_signal_connect(window, "destroy",
 			G_CALLBACK(mw_destroy), NULL);
 
-
 	data_dump(dumped_text);
 
 	mbox=gtk_vbox_new(FALSE, 0);
@@ -303,6 +308,9 @@ int gui_run(int *argc, char **argv[])
 	gtk_window_add_accel_group(GTK_WINDOW(dump_window), accel_group);
 	gtk_window_add_accel_group(GTK_WINDOW(window), accel_group);
 
+	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
+	gtk_window_set_resizable(GTK_WINDOW(dump_window), FALSE);
+
 	/*	and show	*/
 	gtk_widget_show_all(window);
 	gtk_widget_show_all(dump_vbox);
@@ -348,7 +356,7 @@ int gui_add(void *object, void *module)
 	g_signal_connect(window, "delete-event",
 			G_CALLBACK(gui_module_delete_event), module);
 
-/*	gtk_widget_show_all(window);*/
+	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
 	gtk_widget_show(window);
 
 	return 0;

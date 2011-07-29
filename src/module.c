@@ -313,12 +313,22 @@ int module_destroy(module_t *mod, const char *reason)
 	return 0;
 }
 
+void module_destroy_all(const char *reason)
+{
+	int i;
+
+	for (i=0; i<MODULE_CNT; i++) {
+		if (modules[i].id.handle)
+			module_destroy(modules+i, reason);
+	}
+}
+
+
 /*	called from main while starting program	*/
 int modules_init(void)
 {
 	memset(modules, 0, MODULE_CNT*sizeof(module_t));
 	return 0;
-
 }
 
 

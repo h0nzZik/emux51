@@ -201,8 +201,12 @@ void movc_a_code_dptr(unsigned short idx)
 
 	addr=read_data(DPH)<<8;
 	addr|=read_data(DPL);
+	addr+=read_Acc();
 
 	data=read_code(addr);
+
+/*	printf("data == %d\n", data);*/
+
 	write_Acc(data);
 	PC++;
 }
@@ -235,7 +239,7 @@ void djnz_rx_addr(unsigned short idx)
 	if (rdata) {
 		PC+=addr;
 	}
-	
+
 }
 void jz(unsigned int idx)
 {
@@ -256,6 +260,20 @@ void jnz(unsigned int idx)
 	if(read_Acc()){
 		PC+=inc;
 	}
+}
+void cjne_rx_imm8_addr(unsigned int idx)
+{
+	signed char inc;
+	unsigned char data;
+	unsigned char rdata;
+
+	rdata=read_register(read_code(idx)&0x07);
+	data=read_code(idx+1);
+	inc=read_code(idx+2);
+	PC+=3;
+	if (rdata != data)
+		PC+=inc;
+	write_carry(rdata < data);
 }
 /*		</byte conditional jumps>		*/
 
@@ -506,6 +524,18 @@ void add_a_rx(unsigned short idx)
 	PC++;
 }
 
+void inc_rx(unsigned short idx)
+{
+	unsigned char reg;
+	unsigned char data;
+
+	reg=read_code(idx)&0x07;
+	data=read_register(reg);
+	data++;
+	write_register(reg, data);
+	PC++;
+}
+
 void anl_a_addr(unsigned short idx)
 {
 	unsigned char data;
@@ -595,6 +625,11 @@ void anl_c_naddr(unsigned short idx)
 	write_carry(c);
 	PC+=2;
 
+}
+
+void nop(unsigned short idx)
+{
+	PC++;
 }
 
 void empty(unsigned short idx)
@@ -702,6 +737,9 @@ void init_mov_instructions(void)
 	/*	mov a, @a+pc	*/
 	opcodes[0x83].f=movc_a_code_pc;
 	opcodes[0x83].time=2;
+	/*	mov addr, a	*/
+	opcodes[0xF5].f=mov_addr_a;
+	opcodes[0xF5].time=1;
 
 
 
@@ -751,10 +789,15 @@ void init_jump_instructions(void)
 	opcodes[0x02].f=ljmp;
 	opcodes[0x02].time=2;
 
-
 	/*	djnz	*/
 	for (i=0xD8; i<=0xDF; i++) {
 		opcodes[i].f=djnz_rx_addr;
+		opcodes[i].time=2;
+	}
+	/*	cjne	*/
+	for (i=0xB8; i<=0xBF; i++) {
+		opcodes[i].f=cjne_rx_imm8_addr;
+		/*	CHECK:	*/
 		opcodes[i].time=2;
 	}
 
@@ -887,6 +930,13 @@ void init_aritm_instructions(void)
 
 	opcodes[0xB0].f=anl_c_naddr;
 	opcodes[0xB0].time=2;
+
+	/*	inc rx	*/
+	for (i=0x08; i<=0x0F; i++) {
+		opcodes[i].f=inc_rx;
+		/*	CHECK	*/
+		opcodes[i].time=1;
+	}
 }
 
 
@@ -898,6 +948,10 @@ void init_instructions(void)
 		opcodes[i].f=empty;
 		opcodes[i].time=10;
 	}
+
+	/*	NOP	*/
+	opcodes[0].f=nop;
+	opcodes[0].time=1;
 
 	init_ret_instructions();
 	init_jump_instructions();

@@ -78,5 +78,7 @@ int module_queue_add(modid_t modid, unsigned cycles, void (*f)(void));
 
 
 int modules_init(void);
+void module_destroy_all(void);
+
 
 #endif
