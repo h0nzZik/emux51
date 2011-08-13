@@ -64,6 +64,7 @@ void *module_init(modid_t modid, emuf_t *funcs)
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), in);
 	gtk_box_pack_start(GTK_BOX(vbox), select, FALSE, FALSE, 0);
+
 	gtk_box_pack_start(GTK_BOX(vbox), ibox, FALSE, FALSE, 0);
 	gtk_container_set_border_width(GTK_CONTAINER(ibox), 10);
 	in->sseg=seven_seg_new();
@@ -72,10 +73,12 @@ void *module_init(modid_t modid, emuf_t *funcs)
 
 	gtk_widget_show_all(vbox);
 	in->f->set_space(in->id, in);
+	in->f->set_name(in->id, "7 segmented display");
 
 	return vbox;
 }
 void module_exit(mi_t *in, const char *str)
 {
 	printf("[7seg:%d]\texiting because of %s\n",in->id.id, str);
+	g_free(in);
 }

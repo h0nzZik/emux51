@@ -1,53 +1,77 @@
 # Makefile for linux and linux to windows cross-compiling
-CFLAGS=-Wall -O2
+CFLAGS=-c -Wall -O2 -Wformat `${PKG-CONFIG} --cflags gtk+-2.0 glib-2.0`
 INCLUDE=-I include
 
-ifeq (${ARCH}, WIN32)
+ifeq (${arch}, windows)
 	PKG-CONFIG=mingw32-pkg-config
-	archsrc=win32.c
 	CC=i686-pc-mingw32-gcc
+
 	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm -mwindows
-	OBJ=.wobj
-	OUT=bin/emux51.exe
-	LOG=log/log-win.txt
+	OUTDIR=out/windows
+	OUT=out/windows/emux51.exe
+	DEX=.dll
 else
 	PKG-CONFIG=pkg-config
-	archsrc=posix.c
+	arch=nixies
+
 	LDFLAGS=`${PKG-CONFIG} --libs gtk+-2.0 gthread-2.0`
-	OBJ=.obj
-	OUT=bin/emux51
-	LOG=log/log
+	OUT=out/nixies/emux51
+	OUTDIR=out/nixies
+	PIC=-fPIC
+	DEX=.so
 endif
 
-targets=instructions emux51 module hex settings
-objects=${OBJ}/instructions.o ${OBJ}/emux51.o ${OBJ}/arch.o ${OBJ}/module.o \
-	${OBJ}/hex.o ${OBJ}/gui.o ${OBJ}/settings.o
+OBJ=.obj/${arch}
+LOG=out/${arch}/log.txt
+archtarget=${arch}
+
+targets=instructions emux51 module hex settings ${archtarget} gui alarm
+objects=${OBJ}/instructions.o ${OBJ}/emux51.o ${OBJ}/${archtarget}.o ${OBJ}/module.o \
+	${OBJ}/hex.o ${OBJ}/gui.o ${OBJ}/settings.o ${OBJ}/alarm.o
+
+widgets=port_selection 7seg
+widgeto=${OBJ}/port_selection.o ${OBJ}/7seg.o
 
 
 .PHONY: clean
 
-build:	${targets} arch gui
-	${CC} ${objects} ${LDFLAGS} -o ${OUT} >> ${LOG}
+build:	${targets} gui alarm widgets
+	@ echo linking..
+	@ ${CC} -L${OUTDIR} -lwidgets ${objects} ${LDFLAGS}  -o ${OUT} >> ${LOG}
 
 ${targets}:
-	${CC} ${INCLUDE} -c ${CFLAGS} -o ${OBJ}/$@.o src/$@.c 2>>${LOG}
+	@ echo ${CC} src/$@.c
+	@ ${CC} ${INCLUDE} ${CFLAGS} -o ${OBJ}/$@.o src/emux51/$@.c 2>>${LOG}
 
-arch:	
-	${CC} ${INCLUDE} -c ${CFLAGS} -o ${OBJ}/arch.o src/arch/${archsrc} 2>>${LOG}
-	
-gui:
-	${CC} ${INCLUDE} -c ${CFLAGS} `${PKG-CONFIG} --cflags gtk+-2.0`\
-	-o ${OBJ}/gui.o src/gui.c 2>>${LOG} 
 mods:
-	make --makefile=modules/Makefile
+	@ make --makefile=modules/Makefile ARCH=${ARCH}
+
+widgets: ${widgets}
+	@ echo linking widgets..
+	@ ${CC} -shared -o ${OUTDIR}/libwidgets${DEX} ${widgeto} `${PKG-CONFIG} --libs gtk+-2.0`
+
+${widgets}:
+	@ echo ${CC} src/widgets/$@.c
+	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
+
+
+modules=3x7seg.mod 7seg.mod led.mod switch.mod
+
+modules: ${modules}
+${modules}:
+	@ echo ${CC} src/modules/${@:.mod=.c}
+	@ ${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/modules/${@:.mod=.o}\
+		src/modules/${@:.mod=.c}
+	@ echo linking ${OBJ}/modules/${@:.mod=.o}
+	@ ${CC} -shared -o ${OUTDIR}/modules/${@:.mod=${DEX}} ${OBJ}/modules/${@:.mod=.o}\
+		`${PKG-CONFIG} --libs gtk+-2.0` -L${OUTDIR} -lwidgets
+
 
 clean:
+	rm -f ${OBJ}/*.o
+	rm -f ${OBJ}/modules/*.o
 	rm -f ${LOG}
-	rm -f ${OBJ}/*
 	rm -f ${OUT}
-cleanall:
-	rm -f log/*
-	rm -f .obj/*
-	rm -f .wobj/*
-	rm -f bin/*
-	
+	rm -f ${OUTDIR}/libwidgets${DEX}
+	rm -f ${OUTDIR}/modules/*${DEX}
+

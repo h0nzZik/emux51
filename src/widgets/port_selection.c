@@ -41,10 +41,39 @@ static void port_selection_init(PortSelection *ps)
 	GSList *group;
 
 	gtk_container_set_border_width(GTK_CONTAINER(ps), 3);
+	gtk_box_set_homogeneous(GTK_BOX(ps), 1);
 	group=NULL;
 	for(i=0; i<4; i++) {
 		/*	create button	*/
 		sprintf(buff, "Port %d", i);
+		ps->buttons[i]=gtk_radio_button_new_with_label(group, buff);
+		group=gtk_radio_button_get_group
+			(GTK_RADIO_BUTTON (ps->buttons[i]));
+		/*	add it to box	*/
+		gtk_box_pack_start(GTK_BOX(ps), ps->buttons[i], FALSE, FALSE, 0);
+		/*	and connect signal	*/
+		g_signal_connect(ps->buttons[i], "toggled",
+				G_CALLBACK(port_selection_toggled), ps);
+		gtk_widget_show(ps->buttons[i]);
+	}
+
+
+	ps->port=0;
+
+}
+
+static void h_port_selection_init(HPortSelection *ps)
+{
+	int i;
+	char buff[20];
+	GSList *group;
+
+	gtk_container_set_border_width(GTK_CONTAINER(ps), 3);
+	gtk_box_set_homogeneous(GTK_BOX(ps), 1);
+	group=NULL;
+	for(i=0; i<4; i++) {
+		/*	create button	*/
+		sprintf(buff, "P%d", i);
 		ps->buttons[i]=gtk_radio_button_new_with_label(group, buff);
 		group=gtk_radio_button_get_group
 			(GTK_RADIO_BUTTON (ps->buttons[i]));
@@ -98,11 +127,42 @@ GType port_selection_get_type(void)
 	return ps_type;
 }
 
+GType h_port_selection_get_type(void)
+{
+	static GType ps_type=0;
+
+	/*	first call?	*/
+	if(ps_type == 0) {
+		const GTypeInfo ps_info =
+		{
+			sizeof(HPortSelectionClass),
+			NULL,	/* base init function	*/
+			NULL,	/* base final function	*/
+			(GClassInitFunc) port_selection_class_init,
+			NULL,	/* class final func	*/
+			NULL,	/* class data ptr	*/
+			sizeof(HPortSelection),
+			0,	/* n preallocs	*/
+			(GInstanceInitFunc) h_port_selection_init,
+		};
+		ps_type=g_type_register_static(GTK_TYPE_HBOX,
+					"h-port-selector",
+					&ps_info,0);
+	}
+	return ps_type;
+}
+
 
 GtkWidget *port_selection_new(void)
 {
 	return GTK_WIDGET(g_object_new(port_selection_get_type(), NULL));
 }
+
+GtkWidget *h_port_selection_new(void)
+{
+	return GTK_WIDGET(g_object_new(h_port_selection_get_type(), NULL));
+}
+
 
 guint port_selection_get_port(PortSelection *ps)
 {

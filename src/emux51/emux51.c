@@ -632,14 +632,13 @@ void data_dump(char *buffer)
 	}
 
 }
-
+int test_func();
 int main(int argc, char *argv[])
 {
-//	void *hndl;
+
 	printf("[emux]\tstarting..\n");
-//	hndl=dlopen("./widgets.so", RTLD_NOW | RTLD_GLOBAL);
-//	if (hndl == NULL)
-//		printf("dlopen error\n");
+	srand(time(NULL));
+	printf("%d\n", test_func());
 	signal(SIGINT, sigint_handler);
 	init_instructions();
 	init_machine();

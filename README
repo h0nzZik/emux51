@@ -1,71 +1,63 @@
-*	Welcome to emux51, the modular 8051 emulator.			*
+*	Welcome to emux51, the modular 8051 emulator.
 
 		Priorities:
-*	modularity							*
-*	portability							*
-*	simplicity							*
+*	modularity
+*	portability
+*	simplicity
 
 
 		Destination platforms:
-*	At first, I want to use this under standard Linux distributions	*
-*	At second, some people wants to use this under standard Windows	*
-*	At third, I would be happy if this will be able to run		*
-	on any Posix compatabile operation system.
+*	Standard GNU/Linux distributions.
+*	Standard Windows
+
+		Dependencies:
+*	GTK+, glibc
+
 
 
 		Status:
-*	Module interface is ok.						*
-*	Indirect memory access.						*
-*	Basic instructions are ok.					*
-*	Timers may be good now.						*
-*	Simple graphic interface.					*
-*	Timer interrupts are ok.					*
-*	External interrupts are broken and disabled.			*
-*	make ARCH=WIN32 perform cross-compiling to WIN32 architecture	*
-
-		Modules:
-*	Leds								*
-*	Switches							*
+*	Improved module interface
+*	!! LEDs aren't nice.
+*	!! PortSelection was raped.
+*	Timers may be good now.
+*	Simple graphic interface.
+*	Timer interrupts are ok.
+*	!! External interrupts are broken and disabled.
+*	'make arch=windows' performs cross-compiling to WIN32
+*
+*	Implemented instructions:
+*	* mov, movc
+*	* call, lcall
+*	* push, pop
+*	* sjmp, ajmp, ljmp
+*	* djnz	rx, addr
+*	* setb, clr, cpl
+*	* jb, jnb, jbc
+*	* ret, reti
+*	* add
+*	* inc
+*	* anl
+*	* swap, xch, xchd
+*
+*	Implemented modules:
+*	* Leds
+*	* Switches
+*	* 7 segmented display
+*	* 3x7seg dynamic display
 
 		TODO:
-*	!! PSW features not implemented yet. Do it!!			*
-*	env settings							*
-*	Fix external interrupts.					*
-*	Improve UI.							*
-*	Do a lot of instructions.					*
-*	Add data types for emulator pointers and data types.		*
-*	[Do some timer stuff.]						*
+*	!! Some PSW features are not implemented yet. Do it.
+*	!! Rewrite PortSelection.
+*	!! Rewrite LEDs.
+*	Add led widget
+*	env settings
+*	Fix external interrupts.
+*	Improve UI.
+*	Do a lot of instructions.
+*	[Do some timer stuff.]
 
 
-		Actual instruction set:
-*	All 'mov' and 'movc' instructions. Movx are ignored now ;)
-*	lcall	addr
-*	acall	addr
-*
-*	push	addr
-*	pop	addr
-*
-*	sjmp	addr
-*	ajmp	addr
-*	ljmp	addr
-*
-*	djnz	rx, addr
-*
-*	setb	bit_addr
-*	setb	c
-*
-*	clr	bit_addr
-*	clr	c
-*	clr	a
-*
-*	cpl	bit_addr
-*
-*	jbc	bit_addr, addr
-*	jb	bit_addr, addr
-*	jnb	bit_addr, addr
-*
-*	ret
-*	reti
+
 
 
 

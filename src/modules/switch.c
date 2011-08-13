@@ -3,145 +3,119 @@
 #include <stdlib.h>
 #include <gtk/gtk.h>
 #include <module.h>
+#include <widgets/port_selection.h>
 
+typedef struct {
+	modid_t id;
+	emuf_t *f;
 
-modid_t id;
-emuf_t *f;
+	int port;
+	GtkWidget *check_buttons[8];
+	char ext_state;
+} inst_t;
 
-
-GtkWidget *main_box;
-GtkWidget *button_box[4];
-GtkWidget *check_buttons[4][8];
-GtkWidget *labels[4];
-
-
-GtkWidget *menubar;
-GtkWidget *portmenu;
-
-/*	menu	*/
-GtkWidget *ports;
-/*->*/	GtkWidget *menu_port_item[4];
-
-char ext_state[4];
-
-
-static void toggled(GtkToggleButton *button, gpointer data)
+static void toggled(GtkToggleButton *button, inst_t *in)
 {
 	int active;
-	int port;
 	int bit;
+	int i;
 
-	port=((int)data)/8;
-	bit=7-(((int)data)%8);
+	/* looking for our bit	*/
+	bit=0;
+	for (i=0; i<8; i++){
+		if ((void *)in->check_buttons[i] == (void *)button) {
+			bit=i;
+			break;
+		}
+	}
 
 	active=gtk_toggle_button_get_active(button);
 	if (active) {
-		ext_state[port]|=1<<bit;
+		in->ext_state|=1<<bit;
 	} else {
-		ext_state[port]&=~(1<<bit);
+		in->ext_state&=~(1<<bit);
 	}
-	printf("on P%d is now 0x%x\n", ext_state[port]);
-	f->write_port(id, port, ext_state[port]);
+	printf("there is now 0x%x\n", in->ext_state);
+	in->f->write_port(in->id, in->port, in->ext_state);
 }
 
-static void menu_toggled(GtkToggleButton *button, gpointer data)
+
+static void port_select(PortSelection *ps, inst_t *self)
 {
-	int active;
-	int rval;
+	char port;
 	int i;
-	active=gtk_check_menu_item_get_active(GTK_CHECK_MENU_ITEM(button));
-	if (active){
-		rval=f->alloc_bits(id, (int)data, 0xFF);
-		if (rval){
-			printf("[switch]\tcannot allocate port %d\n", (int)data);
-			return;
-		}
-		ext_state[(int)data]=0xFF;
-		for (i=0; i<8; i++) {
-			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON
-				(check_buttons[(int)data][i]), TRUE);
-		}
-		gtk_widget_show(button_box[(int)data]);
-	} else {
-		f->write_port(id, (int)data, 0xFF);
-		f->free_bits(id, (int)data, 0xFF);
-		gtk_widget_hide(button_box[(int)data]);
+
+	port=port_selection_get_port(ps);
+	if (self->f->alloc_bits(self->id, port, 0xFF)){
+		printf("cann't alloc port\n");
+		return;
 	}
+	/* reset port */
+	self->f->write_port(self->id, self->port, 0xFF);
+	self->f->free_bits(self->id, self->port, 0xFF);
+	/* reset buttons */
+	for (i=0; i<8; i++) {
+		gtk_toggle_button_set_active
+			(GTK_TOGGLE_BUTTON(self->check_buttons[i]), 1);
+	}
+	/* new port */
+	self->port=port;
+	
 }
 
 void * module_init(modid_t modid, void *cbs)
 {
-	int i;
 	int j;
-	char buff[40];
+
+	GtkWidget *main_box;
 	GtkWidget *button;
+	GtkWidget *button_box;
+	GtkWidget *select;
+	inst_t *in;
 
-	id=modid;
-	f=cbs;
+	printf("tady dobry\n");
+	in=g_malloc0(sizeof(inst_t));	
+	printf("tady dobry\n");
+	printf("tady dobry\n");
 
+	in->id=modid;
+	in->f=cbs;
 
-	memset(ext_state, 4, 0xFF);
+	in->ext_state=0xFF;
 
-	/*	<gui>	*/
 
 
 	main_box=gtk_vbox_new(FALSE, 0);
-
-	/*	menu	*/
-	menubar=gtk_menu_bar_new();
-	portmenu=gtk_menu_new();
-
-	ports=gtk_menu_item_new_with_label("Ports");
-	gtk_menu_item_set_submenu(GTK_MENU_ITEM(ports), portmenu);
-
-	for (i=0; i<4; i++) {
-		sprintf(buff, "Port %d", i);
-		menu_port_item[i]=gtk_check_menu_item_new_with_label(buff);
-		gtk_menu_shell_append(GTK_MENU_SHELL(portmenu), menu_port_item[i]);
-		g_signal_connect(G_OBJECT(menu_port_item[i]), "toggled",
-				 G_CALLBACK(menu_toggled), (gpointer)i);
-	}
-
-	gtk_menu_shell_append(GTK_MENU_SHELL(menubar), ports);
-	gtk_box_pack_start(GTK_BOX(main_box), menubar, FALSE, FALSE, 2);
-
+	select=h_port_selection_new();
+	g_signal_connect(select, "port-select",
+			G_CALLBACK(port_select), in);
+	gtk_box_pack_start(GTK_BOX(main_box), select, FALSE, FALSE, 0);
 
 	/*	buttons	*/
-	for(i=0; i<4; i++) {
-		button_box[i]=gtk_hbox_new(FALSE, 0);
-		gtk_box_pack_start(GTK_BOX(main_box), button_box[i], FALSE, FALSE, 0);
-		sprintf(buff, "Port %d", i);
-		labels[i]=gtk_label_new(buff);
-		gtk_box_pack_start(GTK_BOX(button_box[i]), labels[i], FALSE, FALSE, 0);
+	button_box=gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(main_box), button_box, FALSE, FALSE, 0);
 
-		for(j=0; j<8; j++) {
-			button=gtk_check_button_new();
-			g_signal_connect(button, "toggled",
-				G_CALLBACK(toggled), (gpointer)(8*i+j));
-			check_buttons[i][j]=button;
-			gtk_box_pack_start(GTK_BOX(button_box[i]), button,
-				FALSE, FALSE, 0);
-		}
+	for(j=0; j<8; j++) {
+		button=gtk_check_button_new();
+		g_signal_connect(button, "toggled",
+			G_CALLBACK(toggled), in);
+		gtk_box_pack_start(GTK_BOX(button_box), button,	FALSE, FALSE, 0);
+		in->check_buttons[j]=button;
 	}
 
+
 	gtk_widget_show_all(main_box);
-
-/*	set default state	*/
-	for (i=0; i<4; i++)
-		gtk_widget_hide(button_box[i]);
-
-	/*	</gui>		*/
-
+	printf("tady taky\n");
+	in->f->set_space(in->id, in);
 	return main_box;
 }
 
-void module_exit(const char *str)
+void module_exit(inst_t *self, const char *str)
 {
-	int i;
+	printf("[switch:%d] exiting because of %s\n", self->id.id, str);
 
-	printf("called\n");
-	for(i=0; i<4; i++) {
-		f->write_port(id, i, 0xFF);
-		f->free_bits(id, i, 0xFF);
-	}
+	self->f->write_port(self->id, self->port, 0xFF);
+	self->f->free_bits(self->id, self->port, 0xFF);
+
+	g_free(self);
 }

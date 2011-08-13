@@ -1,9 +1,16 @@
 /*
  * widgets/7seg.c - implementation of SevenSeg widget.
  */
+
+int test_func(void)
+{
+	return 5;
+}
+
 #include <gtk/gtk.h>
 #include <widgets/7seg.h>
 #include <stdio.h>
+
 
 GdkPoint horizontal_segment[6]={{0, SEG_OBESITY/2},
 				{SEG_TRLEN, 0},
@@ -104,6 +111,7 @@ static void seven_seg_init(SevenSeg *instance)
 	gtk_widget_show(GTK_WIDGET(instance));
 	
 }
+
 
 GType seven_seg_get_type(void)
 {
