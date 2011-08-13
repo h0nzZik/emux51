@@ -14,5 +14,6 @@ int setup_timer(float freq, void (*callback)(void));
 void *load_lib(const char *path);
 void close_lib(void *lib);
 void *load_sym(void *lib, const char *name);
+int arch_create_pipe(int pipefd[2]);
 
 #endif

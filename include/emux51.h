@@ -8,7 +8,7 @@
 
 
 #define MACHINE_FREQ_DEFAULT 1000000
-#define SYNC_FREQ_DEFAULT 50
+#define SYNC_FREQ	50 /* [HZ] */
 
 
 /*	byte adress	*/
@@ -30,6 +30,7 @@
 
 /*	general bit adreseses	*/
 #define CARRY	0xD7
+#define ACARRY	0xD6
 
 /*	port bit adresses	*/
 #define P0(x) (0x80 + x)

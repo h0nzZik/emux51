@@ -1,7 +1,7 @@
 #ifndef MODULE_H
 #define MODULE_H
 
-#define MODULE_CNT 8
+#define MODULE_CNT 32
 
 #include <emux51.h>
 
@@ -23,10 +23,19 @@ typedef struct {
 	int  (*write_port)  (modid_t id, int port, char data);
 	int  (*alloc_bits)  (modid_t id, int port, char mask);
 	int  (*free_bits)   (modid_t id, int port, char mask);
-	int  (*handle_event)(modid_t id, const char *event, void (*handle)());
-	int  (*queue_add)   (modid_t id, unsigned cycles, void (*event)(void));
+	int  (*handle_event)
+		(modid_t id, const char *event, void (*handle)());
+	int  (*cycle_queue_add)
+		    (modid_t id, unsigned cycles, void (*event)(void * space));
+	int  (*time_queue_add)
+		    (modid_t id, unsigned time, void (*event)(void * space));
+	int  (*set_space)   (modid_t id, void *space);
+	int  (*set_name)    (modid_t id, const char *name);
+	void (*crash)	    (modid_t id, const char *reason);
+	
 
 } emuf_t;
+
 
 /*
  *	Functions, provided by the module itself.
@@ -42,10 +51,10 @@ typedef struct {
 typedef struct {
 	/*	only these functions are necessary	*/
 	void *(*init) (modid_t id, emuf_t *callbacks);
-	void (*exit) (const char *reason);	
+	void (*exit) (void *space, const char *reason);	
 	/*		*/
-	void (*write)(int port);
-	void (*read) (int port);
+	void (*write)(void *space, int port);
+	void (*read) (void *space, int port);
 } modf_t;
 
 
@@ -55,13 +64,17 @@ typedef struct {
 	char mask[PORTS_CNT];
 	emuf_t callbacks;
 	modf_t f;
+	void *space;
+	void *window;
+	const char *name;
 
 } module_t;
 
-/*	delta array type	*/
+/*	delta list type	*/
 typedef struct DLIST {
-	void (*f)(void);
+	void (*f)(void *space);
 	unsigned dt;
+	void *space;
 	struct DLIST *next;
 	
 } dlist_t;
@@ -73,12 +86,13 @@ int module_destroy(module_t *mod, const char *reason);
 void module_import_port(int port);
 void module_export_port(int port);
 
-void module_queue_perform(int steps);
-int module_queue_add(modid_t modid, unsigned cycles, void (*f)(void));
+
+void module_op_queue_perform(int steps);
+void module_time_queue_perform(void);
 
 
 int modules_init(void);
-void module_destroy_all(void);
+void module_destroy_all(const char *reason);
 
 
 #endif
