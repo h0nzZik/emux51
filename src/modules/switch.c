@@ -24,7 +24,7 @@ static void toggled(GtkToggleButton *button, inst_t *in)
 	bit=0;
 	for (i=0; i<8; i++){
 		if ((void *)in->check_buttons[i] == (void *)button) {
-			bit=i;
+			bit=8-i;
 			break;
 		}
 	}

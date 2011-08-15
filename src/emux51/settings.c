@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <glib.h>
 
 
 #define CFGNAME "emuxrc"
@@ -26,7 +27,7 @@ char *configfile(void)
 	return _configfile;
 }
 
-
+#if 0
 /*	returns value of 'variable'	*/
 char *config_read(char *variable)
 {
@@ -80,4 +81,38 @@ char *config_read(char *variable)
 	fclose(fr);
 	return(data);
 }
+#endif
+int config_parse(void)
+{
+	char *buff;
+	int len;
+	FILE *fr;
+
+	fr=fopen(configfile(), "rt");
+	if (fr == NULL)
+		return -1;
+
+	 while(1){
+		buff=g_malloc(80);
+		if(!fgets(buff, 80, fr))
+			break;
+		len=strlen(buff);
+		/*	ignore comments	*/
+		if(buff[0] == '#') {
+			g_free(buff);
+			continue;
+		}
+		/*	EOL and so..	*/
+		while(isspace(buff[--len]))
+			buff[len]='\0';
+
+		if (putenv(buff)){
+			/* probably OOM */
+			g_free(buff);
+			return -2;
+		}
+	}
+	return 0;
+}
+
 

@@ -587,6 +587,12 @@ void alarm_handler(void)
 
 	static int last=0;
 	int cnt;
+/*
+	static int angle=0;
+	gtk_label_set_angle(GTK_LABEL(file_label), angle);
+	angle++;
+	angle%=360;
+*/
 /*	static int alarm_calls=0;
 
 	alarm_calls++;
@@ -632,17 +638,17 @@ void data_dump(char *buffer)
 	}
 
 }
-int test_func();
 int main(int argc, char *argv[])
 {
 
 	printf("[emux]\tstarting..\n");
 	srand(time(NULL));
-	printf("%d\n", test_func());
+	config_parse();
 	signal(SIGINT, sigint_handler);
 	init_instructions();
 	init_machine();
 	modules_init();
+	printf("module_dir == %s\n", getenv("module_directory"));
 
 	machine_freq=MACHINE_FREQ_DEFAULT;
 	set_timer(SYNC_FREQ, alarm_handler);

@@ -91,7 +91,6 @@ void *module_init(modid_t modid, emuf_t *funcs)
 {
 	/*	init module	*/
 	int i;
-	char buff[80];
 	GtkWidget *hbox;
 	GtkWidget *select;
 	mod_instance_t *in;

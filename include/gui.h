@@ -1,6 +1,8 @@
 #ifndef GUI_H
 #define GUI_H
 
+#include <gtk/gtk.h>
+
 #define FILE_LABEL_LEN 20
 
 int gui_run(int *argc, char **argv[]);

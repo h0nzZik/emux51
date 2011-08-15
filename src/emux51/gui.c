@@ -2,7 +2,6 @@
  * gui.c - simple graphical interface.
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,16 +80,10 @@ static void mw_destroy(GtkWidget *widget, gpointer data)
 static void set_file_label(const char *str)
 {
 	int len;
-	char buff[FILE_LABEL_LEN+4];
+	char *buff=str;
 
-	len=strlen(str);
-	if (len > FILE_LABEL_LEN) {
-		str+=len-FILE_LABEL_LEN;
-		sprintf(buff, "...%s", str);
-	} else {
-		sprintf(buff, "%s", str);
-	}
 	gtk_label_set_text(GTK_LABEL(file_label), buff);
+	gtk_window_set_title(GTK_WINDOW(window), buff);
 }
 
 
@@ -101,7 +94,6 @@ static void file_load(void *data)
 	int rval;
 	char *fname;
 	char *dirname;
-
 	gui_set_stop();
 
 	file_dialog=gtk_file_chooser_dialog_new("Select file", NULL,
@@ -111,11 +103,10 @@ static void file_load(void *data)
 	gtk_dialog_set_default_response(
 			GTK_DIALOG(file_dialog), GTK_RESPONSE_OK);
 
-	dirname=config_read("hex_directory");
+	dirname=getenv("hex_directory");
 	if(dirname) {
 		gtk_file_chooser_set_current_folder(
 			GTK_FILE_CHOOSER(file_dialog), dirname);
-		free(dirname);
 	}
 
 	rval=gtk_dialog_run(GTK_DIALOG(file_dialog));
@@ -189,10 +180,9 @@ static void gui_mod_ld(void *data)
 			GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
 	/*	try to set	*/
-	dir=config_read("module_directory");
+	dir=getenv("module_dir");
 	if (dir){
 		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog), dir);
-		free(dir);
 	}
 
 	rval=gtk_dialog_run(GTK_DIALOG(dialog));
@@ -241,10 +231,9 @@ int nitems=sizeof(items)/sizeof(items[0]);
 
 int gui_run(int *argc, char **argv[])
 {
-
 	gtk_init(argc, argv);
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(window), " Welcome in Emux51");
+	gtk_window_set_title(GTK_WINDOW(window), " Welcome to Emux51");
 	g_signal_connect(window, "delete_event",
 			G_CALLBACK(gui_delete_event), NULL);
 	g_signal_connect(window, "destroy",
@@ -252,23 +241,22 @@ int gui_run(int *argc, char **argv[])
 
 	data_dump(dumped_text);
 
-	mbox=gtk_vbox_new(FALSE, 0);
+	mbox=gtk_vbox_new(TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(window), mbox);
-	gtk_container_set_border_width(GTK_CONTAINER(window), 2);
+	gtk_container_set_border_width(GTK_CONTAINER(window), 4);
 
 	/*	menu	*/
 	accel_group=gtk_accel_group_new();
 	itf=gtk_item_factory_new(GTK_TYPE_MENU_BAR, "<main>", accel_group);
-
 	gtk_item_factory_create_items(itf, nitems, items, NULL);
 	itf_widget=gtk_item_factory_get_widget(itf, "<main>");
+	gtk_box_pack_start(GTK_BOX(mbox), itf_widget, TRUE, TRUE, 0);
 
-	gtk_box_pack_start(GTK_BOX(mbox), itf_widget, FALSE, TRUE, 0);
 	/*	file	*/
 	file_label=gtk_label_new("No file loaded.");
 	gtk_box_pack_start(GTK_BOX(mbox), file_label, TRUE, TRUE, 0);
 
-	file_hbox=gtk_hbox_new(FALSE, 0);
+	file_hbox=gtk_hbox_new(TRUE, 2);
 	gtk_box_pack_start(GTK_BOX(mbox), file_hbox, TRUE, TRUE, 0);
 
 	file_button=gtk_button_new_with_label("Load");

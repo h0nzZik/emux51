@@ -1,5 +1,5 @@
 /*
- * arch/win32.c - WIN32 architecture dependent code.
+ * arch/windows.c - WIN32 architecture dependent code.
  */
 #include <fcntl.h>
 #include <windows.h>

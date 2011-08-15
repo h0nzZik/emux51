@@ -41,9 +41,6 @@ static void port_select(PortSelection *ps, gpointer data)
 void *module_init(modid_t modid, emuf_t *funcs)
 {
 	/*	init module	*/
-	int i;
-	char buff[80];
-
 	GtkWidget *select;
 	GtkWidget *vbox;
 	GtkWidget *ibox;
