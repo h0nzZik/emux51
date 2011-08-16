@@ -2,7 +2,7 @@
 #include <module.h>
 
 #include <widgets/7seg.h>
-#include <widgets/port_selection.h>
+#include <widgets/port_selector.h>
 
 typedef struct {
 	modid_t id;
@@ -30,11 +30,11 @@ void module_read(mi_t *in, int port)
 }
 
 
-static void port_select(PortSelection *ps, gpointer data)
+static void port_select(PortSelector *ps, gpointer data)
 {
 	mi_t *in;
 	in=data;
-	in->port_no=port_selection_get_port(ps);
+	in->port_no=port_selector_get_port(ps);
 	import_segments(in);
 }
 
@@ -57,7 +57,7 @@ void *module_init(modid_t modid, emuf_t *funcs)
 	vbox=gtk_hbox_new(FALSE, 0);
 	ibox=gtk_vbox_new(FALSE, 0);
 
-	select=port_selection_new();
+	select=v_port_selector_new();
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), in);
 	gtk_box_pack_start(GTK_BOX(vbox), select, FALSE, FALSE, 0);

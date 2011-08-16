@@ -29,15 +29,19 @@ targets=instructions emux51 module hex settings ${archtarget} gui alarm
 objects=${OBJ}/instructions.o ${OBJ}/emux51.o ${OBJ}/${archtarget}.o ${OBJ}/module.o \
 	${OBJ}/hex.o ${OBJ}/gui.o ${OBJ}/settings.o ${OBJ}/alarm.o
 
-widgets=port_selection 7seg
-widgeto=${OBJ}/port_selection.o ${OBJ}/7seg.o
+widgets=port_selector 7seg
+widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o
 
 
 .PHONY: clean
+.PHONY: build_all
+.PHONY: build
 
-build:	${targets} gui alarm widgets
+build:	${targets} gui alarm
 	@ echo linking..
-	@ ${CC} -L${OUTDIR} -lwidgets ${objects} ${LDFLAGS}  -o ${OUT} >> ${LOG}
+	@ ${CC} -L${OUTDIR} ${objects} ${LDFLAGS}  -o ${OUT} >> ${LOG}
+
+build_all: widgets build modules
 
 ${targets}:
 	@ echo ${CC} src/$@.c
@@ -65,13 +69,14 @@ ${modules}:
 	@ echo linking ${OBJ}/modules/${@:.mod=.o}
 	@ ${CC} -shared -o ${OUTDIR}/modules/${@:.mod=${DEX}} ${OBJ}/modules/${@:.mod=.o}\
 		`${PKG-CONFIG} --libs gtk+-2.0` -L${OUTDIR} -lwidgets
-
+log:
+	cat ${LOG}
 
 clean:
 	rm -f ${OBJ}/*.o
 	rm -f ${OBJ}/modules/*.o
 	rm -f ${LOG}
 	rm -f ${OUT}
-	rm -f ${OUTDIR}/libwidgets${DEX}
-	rm -f ${OUTDIR}/modules/*${DEX}
+#	rm -f ${OUTDIR}/libwidgets${DEX}
+#	rm -f ${OUTDIR}/modules/*${DEX}
 

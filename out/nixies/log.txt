@@ -1,6 +1,0 @@
-src/emux51/instructions.c: In function ‘init_jump_instructions’:
-src/emux51/instructions.c:868: warning: assignment from incompatible pointer type
-src/emux51/emux51.c: In function ‘main’:
-src/emux51/emux51.c:640: warning: implicit declaration of function ‘time’
-src/emux51/module.c: In function ‘module_new’:
-src/emux51/module.c:361: warning: assignment from incompatible pointer type

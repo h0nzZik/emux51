@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <gtk/gtk.h>
 #include <module.h>
-#include <widgets/port_selection.h>
+#include <widgets/port_selector.h>
 
 typedef struct {
 	modid_t id;
@@ -24,7 +24,7 @@ static void toggled(GtkToggleButton *button, inst_t *in)
 	bit=0;
 	for (i=0; i<8; i++){
 		if ((void *)in->check_buttons[i] == (void *)button) {
-			bit=8-i;
+			bit=7-i;
 			break;
 		}
 	}
@@ -35,19 +35,21 @@ static void toggled(GtkToggleButton *button, inst_t *in)
 	} else {
 		in->ext_state&=~(1<<bit);
 	}
-	printf("there is now 0x%x\n", in->ext_state);
-	in->f->write_port(in->id, in->port, in->ext_state);
+	printf("there is now 0x%2x\n", in->ext_state);
+	if (in->f->write_port(in->id, in->port, in->ext_state))
+		printf("shit\n");
 }
 
 
-static void port_select(PortSelection *ps, inst_t *self)
+static void port_select(PortSelector *ps, inst_t *self)
 {
 	char port;
 	int i;
 
-	port=port_selection_get_port(ps);
+	port=port_selector_get_port(ps);
+	printf("[switch:%d]\tport %d was selected\n", self->id.id, port);
 	if (self->f->alloc_bits(self->id, port, 0xFF)){
-		printf("cann't alloc port\n");
+		printf("can't allocate port %d\n", port);
 		return;
 	}
 	/* reset port */
@@ -71,24 +73,21 @@ void * module_init(modid_t modid, void *cbs)
 	GtkWidget *button;
 	GtkWidget *button_box;
 	GtkWidget *select;
-	inst_t *in;
+	inst_t *self;
 
-	printf("tady dobry\n");
-	in=g_malloc0(sizeof(inst_t));	
-	printf("tady dobry\n");
-	printf("tady dobry\n");
+	self=g_malloc0(sizeof(inst_t));	
+	self->id=modid;
+	self->f=cbs;
+	self->f->set_space(self->id, self);
 
-	in->id=modid;
-	in->f=cbs;
-
-	in->ext_state=0xFF;
+	self->ext_state=0xFF;
 
 
 
 	main_box=gtk_vbox_new(FALSE, 0);
-	select=h_port_selection_new();
+	select=h_port_selector_new();
 	g_signal_connect(select, "port-select",
-			G_CALLBACK(port_select), in);
+			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(main_box), select, FALSE, FALSE, 0);
 
 	/*	buttons	*/
@@ -98,15 +97,25 @@ void * module_init(modid_t modid, void *cbs)
 	for(j=0; j<8; j++) {
 		button=gtk_check_button_new();
 		g_signal_connect(button, "toggled",
-			G_CALLBACK(toggled), in);
+			G_CALLBACK(toggled), self);
 		gtk_box_pack_start(GTK_BOX(button_box), button,	FALSE, FALSE, 0);
-		in->check_buttons[j]=button;
+		self->check_buttons[j]=button;
+		gtk_toggle_button_set_active
+			(GTK_TOGGLE_BUTTON(self->check_buttons[j]), 1);
 	}
 
-
+	/*	try to find empty port	*/
+	for(j=0; j<4; j++) {
+		if (self->f->alloc_bits(self->id, j, 0xFF) == 0){
+			printf("found at %d\n", j);
+			self->port=j;
+			port_selector_set_port(PORT_SELECTOR(select), j);
+			break;
+		}
+	}
+	if (j == 4)
+		self->f->crash(self->id, "no empty port found");
 	gtk_widget_show_all(main_box);
-	printf("tady taky\n");
-	in->f->set_space(in->id, in);
 	return main_box;
 }
 

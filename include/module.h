@@ -30,7 +30,7 @@ typedef struct {
 	int  (*time_queue_add)
 		    (modid_t id, unsigned time, void (*event)(void * space));
 	int  (*set_space)   (modid_t id, void *space);
-	int  (*set_name)    (modid_t id, const char *name);
+	void  (*set_name)    (modid_t id, const char *name);
 	void (*crash)	    (modid_t id, const char *reason);
 	
 

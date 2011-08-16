@@ -4,7 +4,7 @@
 #include <gtk/gtk.h>
 #include <module.h>
 
-#include <widgets/port_selection.h>
+#include <widgets/port_selector.h>
 #include <widgets/7seg.h>
 
 
@@ -73,18 +73,20 @@ void test_func(void)
 #endif
 
 /*	handler of "port-select" signal	*/
-static void port_select(PortSelection *ps, gpointer data)
+static void port_select(PortSelector *ps, gpointer data)
 {
 	mod_instance_t *in;
 	int i;
 	in=data;
-	in->port_no=port_selection_get_port(ps);
+	printf("[3x7]\tport select..\n");
+	in->port_no=port_selector_get_port(ps);
 	printf("port %d was selected\n", in->port_no);
 	memset(in->lighting_segments, 0, sizeof(in->lighting_segments));
 
 	for(i=0; i<3; i++)
 		seven_seg_set_segments(in->ssegs[i], 0);
 	import_segments(in);
+	printf("[3x7]\tdone\n");
 }
 
 void *module_init(modid_t modid, emuf_t *funcs)
@@ -106,7 +108,7 @@ void *module_init(modid_t modid, emuf_t *funcs)
 	/*	init gui	*/
 	hbox=gtk_hbox_new(FALSE, 0);
 
-	select=port_selection_new();
+	select=v_port_selector_new();
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), in);
 	gtk_box_pack_start(GTK_BOX(hbox), select, FALSE, FALSE, 0);

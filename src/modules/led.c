@@ -7,7 +7,7 @@
 
 
 #include <module.h>
-#include <widgets/port_selection.h>
+#include <widgets/port_selector.h>
 
 typedef struct {
 	modid_t id;
@@ -81,7 +81,6 @@ static void da_expose(GtkWidget *widget, GdkEventExpose *event, my_t *in)
 	/*	set size of drawing area	*/
 	gtk_widget_set_size_request(widget,
 				LED_COUNT*(LED_RADIUS+LED_SPACE), LED_RADIUS+4);
-	printf("[led]\tupdating area\n");
 
 	update_area(widget, in->port_data, in);
 
@@ -96,9 +95,9 @@ void module_read(my_t *in, int port)
 	update_area(in->da, in->port_data, in);
 }
 
-static void port_select(PortSelection *ps, my_t *in)
+static void port_select(PortSelector *ps, my_t *in)
 {
-	in->port=port_selection_get_port(ps);
+	in->port=port_selector_get_port(ps);
 	in->port_data=in->f->read_port(in->id, in->port);
 	update_area(in->da, in->port_data, in);
 }
@@ -128,7 +127,7 @@ void * module_init(modid_t modid, void *cbs)
 	gtk_widget_set_size_request(in->da, 100, 10);
 	g_signal_connect(in->da, "expose_event",
 			G_CALLBACK(da_expose), in);
-	select=h_port_selection_new();
+	select=h_port_selector_new();
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), in);
 	gtk_box_pack_start(GTK_BOX(box), select, FALSE, FALSE, 0);

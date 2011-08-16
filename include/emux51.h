@@ -162,12 +162,19 @@ void data_dump(char *buffer);
 
 /*	64K  code memory		*/
 extern unsigned char code_memory[];
-
 /*	256B data memory	*/
 extern unsigned char data_memory[];
 
-
+/*	port variables	*/
+extern unsigned char port_latches[PORTS_CNT];
+extern unsigned char port_collectors[PORTS_CNT];
+extern unsigned char port_externals[PORTS_CNT];
+extern unsigned char port_fall[PORTS_CNT];
 
 void alarm_handler(void);
+
+
+void stop(void);
+void start(void);
 
 #endif

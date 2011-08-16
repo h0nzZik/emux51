@@ -37,15 +37,24 @@ unsigned char code_memory[CODE_LENGHT];
 unsigned char data_memory[DATA_LENGHT];
 /*	2B program counter	*/
 unsigned short PC;
-/*	some port variables	*/
+/*	port latch register	*/
 unsigned char port_latches[PORTS_CNT];
+/*	port collector		*/
 unsigned char port_collectors[PORTS_CNT];
+unsigned char port_externals[PORTS_CNT];
 unsigned char port_fall[PORTS_CNT];
 /*	machine cycle counter	*/
 unsigned long counter=0;
 /*	machine cycle freuency, 1/12 * Fosc	*/
 double machine_freq;
 
+
+void export_all(void)
+{
+	int i;
+	for(i=0; i<4; i++)
+		module_export_port(i);
+}
 
 
 int isport(unsigned addr)
@@ -71,36 +80,31 @@ int addr_to_port(unsigned addr)
 }
 
 
-/*		<API for modules>		*/
 int exporting=0;
-unsigned char read_port(int port)
-{
-	return(port_collectors[port]);
-}
-void write_port(int port, char data)
-{
-	char old;
 
-	old=port_collectors[port];
-	port_collectors[port]=port_latches[port]&data;
+void update_port(int port)
+{
+	port_collectors[port]=port_latches[port]&port_externals[port];
 	data_memory[port_to_addr(port)]=port_collectors[port];
-	port_fall[port]=old&~read_port(port);
 
 	exporting=1;
 	module_export_port(port);
 	exporting=0;
 
 }
-/*	</API for modules>	*/
-
+#if 0
+/*	external	*/
+void write_port(int port, char data)
+{
+	port_externals[port]=data;
+	update_port(port);
+}
+#endif
 
 /*	<API for instructions>	*/
 
 unsigned char read_data(unsigned addr)
 {
-	if(FORCE_READ && isport(addr)){
-		module_import_port(addr_to_port(addr));
-	}
 	return(data_memory[addr]);
 	
 }
@@ -112,15 +116,8 @@ void write_data(unsigned addr, char data)
 	data_memory[addr]=data;
 	if(isport(addr)){
 		port=addr_to_port(addr);
-/*
-		printf("[emux]\twriting 0x%2x to port %d\n", data, port);
-*/
 		port_latches[port]=data;
-		port_collectors[port]=data;
-
-		exporting=1;
-		module_export_port(port);
-		exporting=0;
+		update_port(port);
 	}
 }
 unsigned char read_code(unsigned addr)
@@ -272,6 +269,7 @@ void do_reset(void)
 	memset (data_memory, 0, DATA_LENGHT);
 	memset (port_latches, 0xFF, 4);
 	memset (port_collectors, 0xFF, 4);
+	memset (port_externals, 0xFF, 4);
 	data_memory[SP]=7;
 
 	data_memory[0x80]=0xFF;
@@ -495,7 +493,7 @@ static void do_int_requests(void)
 	if (test_bit(PT0) && test_bit(TF0)) {
 		clr_bit(TF0);
 		interrupt_state=2;
-		printf("[emux]\tjumping to timer 0\n");
+//		printf("[emux]\tjumping to timer 0\n");
 		jump_to(ET0_ADDR);
 		return;
 	}
@@ -522,7 +520,7 @@ static void do_int_requests(void)
 	if (test_bit(TF0)) {
 		clr_bit(TF0);
 		interrupt_state=1;
-		printf("[emux]\tjumping to timer 0\n");
+//		printf("[emux]\tjumping to timer 0\n");
 		jump_to(ET0_ADDR);
 		return;
 	}
@@ -656,4 +654,20 @@ int main(int argc, char *argv[])
 	gui_run(&argc, &argv);
 	printf("[emux]\texiting..\n");
 	return 0;
+}
+
+void start(void)
+{
+	running=1;
+	
+}
+void stop(void)
+{
+	running=0;
+	do_reset();
+	export_all();
+}
+void pause(void)
+{
+	running=0;
 }

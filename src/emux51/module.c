@@ -54,8 +54,6 @@ static int module_load(char *path, module_t *mod)
 		return -2;
 	}
 
-//	memset(mod->mask, 0, PORTS_CNT);
-
 	return 0;
 }
 
@@ -101,27 +99,31 @@ int module_free_bits(modid_t modid, int port, char mask)
 
 int module_write_port(modid_t modid, int port, char data)
 {
-	char old;
 	char new;
 	
 	if (port >= PORTS_CNT || test_module_id(modid) || exporting) {
+		fprintf(stderr, "somebody is cheating\n");
 		return -1;
 	}
-	old=read_port(port);
-	new=old;
-	new|=data& modules[modid.id].mask[port];
+	new=port_externals[port];
+	
+	new|=data&modules[modid.id].mask[port];
 	new&=data|~modules[modid.id].mask[port];
-	write_port(port, new);
+
+	printf("writing 0x%2x to port\n", new);
+//	write_port(port, new);
+	port_externals[port]=new;
+	update_port(port);
 	return 0;
 }
-/*	FIXME:	*/
 char module_read_port(modid_t modid, int port)
 {
 	if (port >= PORTS_CNT || test_module_id(modid)) {
-/*		fprintf(stderr, "somebody is cheating\n");*/
+		fprintf(stderr, "somebody is cheating\n");
 		return -1;
 	}
-	return(read_port(port));	
+
+	return(port_collectors[port]);	
 }
 
 int module_set_space(modid_t modid, void *space)
@@ -253,18 +255,12 @@ int handle_event(modid_t modid, const char *event, void (*handle)())
 	module_t *mod;
 
 	if (test_module_id(modid)) {
-/*		fprintf(stderr, "somebody is cheating\n");*/
 		return -1;
 	}
 	mod=&modules[modid.id];
 
 	if (!strcmp(event, "read"))
 		mod->f.write=handle;	/*	;)	*/
-#if 0	// WTF?
-	else
-	if (!strcmp(event, "write"))
-		mod->f.read=handle;
-#endif
 	else
 		return -1;
 	return 0;
@@ -280,22 +276,6 @@ int emulator_state(void)
  *		</API for modules>
  ******************************************************************************/
  
-
-
-/*			<emulator API>				*/
-#if 0
-void module_import_port(int port)
-{
-	int i;
-	module_t *mod;
-
-	for (i=0; i<MODULE_CNT; i++) {
-		mod=&modules[i];
-		if(mod->mask[port] && mod->f.read)
-			mod->f.read(mod->space, port);
-	}
-}
-#endif
 void module_export_port(int port)
 {
 	int i;
@@ -313,7 +293,12 @@ void module_export_port(int port)
 /*	TODO:	*/
 void module_crash(modid_t id, const char *reason)
 {
+	if(test_module_id(id)){
+		printf("fuck\n");
+		return;
+	}
 	fprintf(stderr, "module %d crashed: %s\n", id.id, reason);
+	module_destroy(&modules[id.id], reason);
 }
 
 void module_set_name(modid_t id, const char *name)
@@ -373,6 +358,7 @@ int module_new(char *path)
 }
 
 
+
 int module_destroy(module_t *mod, const char *reason)
 {
 	int i;
@@ -380,8 +366,12 @@ int module_destroy(module_t *mod, const char *reason)
 		printf("[emux]\ttrying to kill NULL\n");
 		return -1;
 	}
+	printf("->exit\n");
 	mod->f.exit(mod->space, reason);
-
+	printf("->rm\n");
+	if(mod->window)
+		gui_remove(mod->window);
+	printf("ok\n");
 /*		CHECK: free alloced bits	*/
 	for(i=0; i<4; i++) {
 		port_usage[i]|=mod->mask[i];

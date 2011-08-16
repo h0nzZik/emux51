@@ -51,12 +51,12 @@ char last_hexfile_dir[PATH_MAX];
 
 static void gui_set_stop(void)
 {
-	running=0;
+	stop();
 	gtk_button_set_label(GTK_BUTTON(run_button), "Run");
 }
 static void gui_set_run(void)
 {
-	running=1;
+	start();
 	gtk_button_set_label(GTK_BUTTON(run_button), "Pause");
 }
 
@@ -80,10 +80,9 @@ static void mw_destroy(GtkWidget *widget, gpointer data)
 static void set_file_label(const char *str)
 {
 	int len;
-	char *buff=str;
 
-	gtk_label_set_text(GTK_LABEL(file_label), buff);
-	gtk_window_set_title(GTK_WINDOW(window), buff);
+	gtk_label_set_text(GTK_LABEL(file_label), str);
+	gtk_window_set_title(GTK_WINDOW(window), str);
 }
 
 
@@ -103,7 +102,7 @@ static void file_load(void *data)
 	gtk_dialog_set_default_response(
 			GTK_DIALOG(file_dialog), GTK_RESPONSE_OK);
 
-	dirname=getenv("hex_directory");
+	dirname=getenv("hex_dir");
 	if(dirname) {
 		gtk_file_chooser_set_current_folder(
 			GTK_FILE_CHOOSER(file_dialog), dirname);
@@ -112,7 +111,8 @@ static void file_load(void *data)
 	rval=gtk_dialog_run(GTK_DIALOG(file_dialog));
 	if (rval == GTK_RESPONSE_OK) {
 		fname=gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(file_dialog));
-		dirname=gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(file_dialog));
+		dirname=gtk_file_chooser_get_current_folder
+			(GTK_FILE_CHOOSER(file_dialog));
 		if (load_hex(fname, code_memory, CODE_LENGHT) == 0) {
 			strncpy(hexfile, fname, PATH_MAX);
 			/*	set only file name as label	*/
@@ -318,7 +318,7 @@ void refresh_dump(void)
 int gui_counter=0;
 void gui_callback(void)
 {
-	if (gui_counter == 10) {
+	if (gui_counter == 5) {
 		gui_counter=0;
 		refresh_dump();
 	}
@@ -331,7 +331,8 @@ gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * data)
 {
 	module_destroy(data, "You were killed dude");
 
-	return FALSE;
+//	return FALSE;
+	return TRUE;
 }
 
 /*	add module into GUI scheme	*/
@@ -350,8 +351,12 @@ void * gui_add(void *object, void *module)
 
 	return window;
 }
-
 void gui_set_window_title(void *window, const char *title)
 {
 	gtk_window_set_title(GTK_WINDOW(window), title);
+}
+void gui_remove(void *window)
+{
+	printf("gui_remove\n");
+	gtk_widget_destroy(window);
 }
