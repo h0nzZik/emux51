@@ -17,8 +17,6 @@
 
 		Status:
 *	Improved module interface
-*	!! LEDs aren't nice.
-*	!! PortSelection was raped.
 *	Timers may be good now.
 *	Simple graphic interface.
 *	Timer interrupts are ok.
@@ -47,8 +45,6 @@
 
 		TODO:
 *	!! Some PSW features are not implemented yet. Do it.
-*	!! Rewrite PortSelection.
-*	!! Rewrite LEDs.
 *	Add led widget
 *	env settings
 *	Fix external interrupts.
