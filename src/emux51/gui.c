@@ -152,7 +152,7 @@ static void file_load(void *data)
 			loaded=1;
 
 			/*	save settings	*/
-			if (strcmp(newdir, dirname)) {
+			if (dirname == NULL || strcmp(newdir, dirname)) {
 				g_setenv("hex_dir", newdir, 1);
 				config_save();
 			}
@@ -243,7 +243,7 @@ static void gui_mod_ld(void *data)
 		newdir=gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(dialog));
 		module_new(fname);
 
-		if (strcmp(newdir, dir)) {
+		if (dir == NULL || strcmp(newdir, dir)) {
 			g_setenv("module_dir", newdir, 1);
 			config_save();
 		}
