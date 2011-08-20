@@ -24,6 +24,7 @@ GtkWidget *file_frame;
 GtkWidget *file_vbox;
 GtkWidget *file_hbox;
 GtkWidget *file_label;
+GtkWidget *file_tooltip;
 GtkWidget *file_button;
 GtkWidget *file_reload;
 
@@ -87,8 +88,12 @@ static void mw_destroy(GtkWidget *widget, gpointer data)
 static void set_file_label(const char *str)
 {
 	int len;
+	char buff[20];
 
-	gtk_label_set_text(GTK_LABEL(file_label), str);
+	strncpy(buff, str, 20);
+	buff[19]=0;
+	gtk_widget_set_tooltip_text(GTK_WIDGET(file_label), str);
+	gtk_label_set_text(GTK_LABEL(file_label), buff);
 	gtk_window_set_title(GTK_WINDOW(window), str);
 }
 
@@ -284,7 +289,8 @@ int gui_run(int *argc, char **argv[])
 	gtk_container_add(GTK_CONTAINER(file_frame), file_vbox);
 	gtk_container_set_border_width(GTK_CONTAINER(file_vbox), 2);
 
-	file_label=gtk_label_new("No file loaded.");
+	file_label=gtk_label_new("");
+	set_file_label("No file loaded.");
 	gtk_box_pack_start(GTK_BOX(file_vbox), file_label, TRUE, TRUE, 0);
 
 	file_hbox=gtk_hbox_new(TRUE, 2);
