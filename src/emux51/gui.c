@@ -198,15 +198,30 @@ static void run_pause_hndl(void *data)
 static void gui_mod_ld(void *data)
 {
 	GtkWidget *dialog;
+	GtkWidget *filter;
 	char *fname;
 	int rval;
 	char *dir;
+	char buff[20];
 
 	dialog=gtk_file_chooser_dialog_new("Select module", NULL,
 			GTK_FILE_CHOOSER_ACTION_OPEN,
 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 			GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
+	/*	create .dll or .so filter	*/
+	sprintf(buff, "*%s", MODULE_EXTENSION);
+	filter=gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "Dynamic libraries");
+	gtk_file_filter_add_pattern(filter, buff);
+	gtk_file_chooser_add_filter(dialog, filter);
+	/*	create all files filter	*/
+	filter=gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "All files");
+	gtk_file_filter_add_pattern(filter, "*");
+	gtk_file_chooser_add_filter(dialog, filter);
+
+	
 	/*	try to set	*/
 	dir=getenv("module_dir");
 	if (dir){

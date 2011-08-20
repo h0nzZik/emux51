@@ -21,6 +21,8 @@ else
 	DEX=.so
 endif
 
+DEFINES=-DMODULE_EXTENSION=\"${DEX}\"
+
 OBJ=.obj/${arch}
 LOG=out/${arch}/log.txt
 archtarget=${arch}
@@ -45,7 +47,7 @@ build_all: widgets build modules
 
 ${targets}:
 	@ echo ${CC} src/$@.c
-	@ ${CC} ${INCLUDE} ${CFLAGS} -o ${OBJ}/$@.o src/emux51/$@.c 2>>${LOG}
+	@ ${CC} ${INCLUDE} ${CFLAGS} ${DEFINES} -o ${OBJ}/$@.o src/emux51/$@.c 2>>${LOG}
 
 mods:
 	@ make --makefile=modules/Makefile ARCH=${ARCH}
