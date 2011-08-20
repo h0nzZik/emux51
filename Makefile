@@ -59,7 +59,7 @@ ${widgets}:
 	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
 
 
-modules=3x7seg.mod 7seg.mod led.mod switch.mod
+modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod
 
 modules: ${modules}
 ${modules}:

@@ -2,7 +2,6 @@
 #define MODULE_H
 
 #define MODULE_CNT 32
-
 #include <emux51.h>
 
 

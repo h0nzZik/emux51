@@ -20,13 +20,20 @@
 GtkWidget *window;
 GtkWidget *mbox;
 
+GtkWidget *file_frame;
+GtkWidget *file_vbox;
 GtkWidget *file_hbox;
 GtkWidget *file_label;
 GtkWidget *file_button;
 GtkWidget *file_reload;
-GtkWidget *file_dialog;
 
+
+GtkWidget *run_frame;
+GtkWidget *run_vbox;
+GtkWidget *freq_label;
+GtkWidget *run_hbox;
 GtkWidget *run_button;
+GtkWidget *freq_button;
 
 GtkWidget *dump_window;
 GtkWidget *dump_vbox;
@@ -93,14 +100,30 @@ static void file_load(void *data)
 	int rval;
 	char *fname;
 	char *dirname;
+	GtkWidget *file_dialog;
+	GtkWidget *filter;
+
 	gui_set_stop();
 
+	/*	create dialog	*/
 	file_dialog=gtk_file_chooser_dialog_new("Select file", NULL,
 				GTK_FILE_CHOOSER_ACTION_OPEN,
 				GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 				GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
 	gtk_dialog_set_default_response(
-			GTK_DIALOG(file_dialog), GTK_RESPONSE_OK);
+				GTK_DIALOG(file_dialog), GTK_RESPONSE_OK);
+	/*	create HEX filter	*/
+	filter=gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "Intel HEX files");
+	gtk_file_filter_add_pattern(filter, "*.[Hh][Ee][Xx]");
+	gtk_file_chooser_add_filter(file_dialog, filter);
+	/*	create all files filter	*/
+	filter=gtk_file_filter_new();
+	gtk_file_filter_set_name(filter, "All files");
+	gtk_file_filter_add_pattern(filter, "*");
+	gtk_file_chooser_add_filter(file_dialog, filter);
+
+
 
 	dirname=getenv("hex_dir");
 	if(dirname) {
@@ -156,7 +179,7 @@ static void reload(void *data)
 static void run_pause_hndl(void *data)
 {
 	if (!loaded) {
-		running=0;
+		gui_set_stop();
 		return;
 	}
 	if (running == 0) {
@@ -241,9 +264,9 @@ int gui_run(int *argc, char **argv[])
 
 	data_dump(dumped_text);
 
-	mbox=gtk_vbox_new(TRUE, 0);
+	mbox=gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(window), mbox);
-	gtk_container_set_border_width(GTK_CONTAINER(window), 4);
+	gtk_container_set_border_width(GTK_CONTAINER(window), 3);
 
 	/*	menu	*/
 	accel_group=gtk_accel_group_new();
@@ -253,11 +276,20 @@ int gui_run(int *argc, char **argv[])
 	gtk_box_pack_start(GTK_BOX(mbox), itf_widget, TRUE, TRUE, 0);
 
 	/*	file	*/
+
+	file_frame=gtk_frame_new("");
+	gtk_box_pack_start(GTK_BOX(mbox), file_frame, FALSE, FALSE, 0);
+
+	file_vbox=gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(file_frame), file_vbox);
+	gtk_container_set_border_width(GTK_CONTAINER(file_vbox), 2);
+
 	file_label=gtk_label_new("No file loaded.");
-	gtk_box_pack_start(GTK_BOX(mbox), file_label, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(file_vbox), file_label, TRUE, TRUE, 0);
 
 	file_hbox=gtk_hbox_new(TRUE, 2);
-	gtk_box_pack_start(GTK_BOX(mbox), file_hbox, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(file_vbox), file_hbox, TRUE, TRUE, 0);
+//	gtk_container_set_border_width(GTK_CONTAINER(file_vbox), 4);
 
 	file_button=gtk_button_new_with_label("Load");
 	gtk_box_pack_start(GTK_BOX(file_hbox), file_button, TRUE, TRUE, 0);
@@ -269,9 +301,25 @@ int gui_run(int *argc, char **argv[])
 	g_signal_connect(file_reload, "clicked", G_CALLBACK(reload), NULL);
 
 	/*	run	*/
+	run_frame=gtk_frame_new("");
+	gtk_box_pack_start(GTK_BOX(mbox), run_frame, FALSE, FALSE, 0);
+
+	run_vbox=gtk_vbox_new(FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(run_frame), run_vbox);
+
+	freq_label=gtk_label_new("12.0 MHz");
+	gtk_box_pack_start(GTK_BOX(run_vbox), freq_label, TRUE, TRUE, 0);
+
+	run_hbox=gtk_hbox_new(TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(run_vbox), run_hbox, FALSE, FALSE, 0);
+
 	run_button=gtk_button_new_with_label("Run");
-	gtk_box_pack_start(GTK_BOX(mbox), run_button, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(run_hbox), run_button, TRUE, TRUE, 0);
 	g_signal_connect(run_button, "clicked", G_CALLBACK(run_pause_hndl), NULL);
+
+	freq_button=gtk_button_new_with_label("Frequency");
+	gtk_box_pack_start(GTK_BOX(run_hbox), freq_button, TRUE, TRUE, 0);
+	
 
 	/*	module load	*/
 	mod_load_button=gtk_button_new_with_label("Load module");

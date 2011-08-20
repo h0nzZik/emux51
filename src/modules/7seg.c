@@ -38,6 +38,7 @@ static void port_select(PortSelector *ps, gpointer data)
 	import_segments(in);
 }
 
+
 void *module_init(modid_t modid, emuf_t *funcs)
 {
 	/*	init module	*/

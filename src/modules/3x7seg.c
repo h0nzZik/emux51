@@ -52,25 +52,6 @@ void module_read(mod_instance_t *in, int port)
 		return;
 	import_segments(in);
 }
-#if 0
-void test_func(void)
-{
-	static int i=0;
-	i++;
-
-
-	if (f->time_queue_add(id, 1, test_func)){
-		printf("error 'handling'");
-		return;
-	}
-
-	if (i<50)
-		return;
-	i=0;
-	printf("huraa\n");
-
-}
-#endif
 
 /*	handler of "port-select" signal	*/
 static void port_select(PortSelector *ps, gpointer data)
@@ -101,6 +82,9 @@ void *module_init(modid_t modid, emuf_t *funcs)
 
 	in->f=funcs;
 	in->id=modid;
+	in->f->set_space(in->id, in);
+	in->f->set_name(in->id, "3x7seg");
+
 	if (in->f->handle_event(in->id, "read", module_read)){
 		in->f->crash(in->id, "can't 'handle'");
 	}
@@ -118,23 +102,11 @@ void *module_init(modid_t modid, emuf_t *funcs)
 		gtk_box_pack_start(GTK_BOX(hbox), in->ssegs[i], FALSE, FALSE, 10);
 	}
 	
-	
-	
-
 	gtk_widget_show_all(hbox);
-	in->f->set_space(in->id, in);
-	in->f->set_name(in->id, "3x7seg");
-	printf("ok\n");
 	return hbox;
-#if 0
-	printf("...\n");
-	if (in->f->time_queue_add(in->id, 1, test_func)){
-		in-f->crash(in->id, "cann't time_queue_add'");
-	}
-#endif
-
 }
 void module_exit(mod_instance_t *in, const char *str)
 {
+	g_free(in);
 	printf("[7seg:%p:%d]\texiting because of %s\n", in, in->id.id, str);
 }

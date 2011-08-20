@@ -503,14 +503,14 @@ void ret(unsigned short idx)
 void reti(unsigned short idx)
 {
 	PC=pop()<<8|pop();
-	if (interrupt_state&2)
-		interrupt_state&=~2;
+	if (interrupt_state&0x02)
+		interrupt_state&=~0x02;
 	else
-	if (interrupt_state&1)
-		interrupt_state&=~1;
+	if (interrupt_state&0x01)
+		interrupt_state&=~0x01;
 	else
 	/*	wtf?	*/
-		;
+		printf("[emux51]\treti from normal state\n");
 }
 
 

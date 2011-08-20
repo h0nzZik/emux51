@@ -7,6 +7,7 @@
 #include <time.h>
 #include <signal.h>
 #include <ctype.h>
+#include <gtk/gtk.h>
 
 #include <emux51.h>
 #include <module.h>
@@ -404,5 +405,6 @@ int modules_init(void)
 	memset(modules, 0, MODULE_CNT*sizeof(module_t));
 	return 0;
 }
+
 
 /*			</emulator API>				*/

@@ -13,6 +13,8 @@
 #include <signal.h>
 #include <dlfcn.h>
 
+#include <glib.h>
+
 #include <settings.h>
 #include <emux51.h>
 #include <instructions.h>
@@ -25,8 +27,9 @@
 /* check this: */
 #define FORCE_READ 0
 
+/*	is running?	*/
+volatile gint G_GNUC_MAY_ALIAS running;
 
-int running=0;
 int loaded=0;
 int interrupt_state=0;
 char hexfile[PATH_MAX];
@@ -39,14 +42,16 @@ unsigned char data_memory[DATA_LENGHT];
 unsigned short PC;
 /*	port latch register	*/
 unsigned char port_latches[PORTS_CNT];
-/*	port collector		*/
+/*	port output		*/
 unsigned char port_collectors[PORTS_CNT];
+/*	port external state	*/
 unsigned char port_externals[PORTS_CNT];
-unsigned char port_fall[PORTS_CNT];
+//unsigned char port_fall[PORTS_CNT];
 /*	machine cycle counter	*/
 unsigned long counter=0;
-/*	machine cycle freuency, 1/12 * Fosc	*/
-double machine_freq;
+
+/*	oscilator frequency	*/
+unsigned long Fosc=12000000;
 
 
 void export_all(void)
@@ -84,23 +89,26 @@ int exporting=0;
 
 void update_port(int port)
 {
+	unsigned char fall;
+	unsigned char old=port_collectors[port];
+
 	port_collectors[port]=port_latches[port]&port_externals[port];
 	data_memory[port_to_addr(port)]=port_collectors[port];
+
+	/*		*/
+	if (port == 3) {
+		fall=old&(~port_collectors[port]);
+		if (fall&0x04)
+			set_bit(IE0);
+		if (fall&0x08)
+			set_bit(IE1);
+	}
 
 	exporting=1;
 	module_export_port(port);
 	exporting=0;
 
 }
-#if 0
-/*	external	*/
-void write_port(int port, char data)
-{
-	port_externals[port]=data;
-	update_port(port);
-}
-#endif
-
 /*	<API for instructions>	*/
 
 unsigned char read_data(unsigned addr)
@@ -258,12 +266,6 @@ int test_bit(unsigned char addr)
 
 /*	</API for instructions>	*/
 
-
-
-
-
-
-
 void do_reset(void)
 {
 	memset (data_memory, 0, DATA_LENGHT);
@@ -286,9 +288,6 @@ void init_machine(void)
 	memset(code_memory, 0, CODE_LENGHT);
 	do_reset();
 }
-
-
-
 
 
 /*	TODO:	external, second timer	*/
@@ -352,7 +351,7 @@ inline int timer_1_running(void)
 /*		Some timer stuff. Timer 0 in mode 1 (16b) is ok,
  *		but I must do the other stuff.
  */
-static inline void update_timer_0(void)
+static void update_timer_0(void)
 {
 
 	data_memory[TL0]++;
@@ -382,7 +381,7 @@ static inline void update_timer_0(void)
 	}
 
 }
-static inline void update_timer_1(void)
+static void update_timer_1(void)
 {
 
 	data_memory[TL1]++;
@@ -422,7 +421,7 @@ static void do_timers_stuff(void)
 		update_timer_1();
 }
 
-
+#if 0
 /*	TODO: interrupt requests	*/
 static inline void set_irqs(void)
 {
@@ -436,7 +435,7 @@ static inline void set_irqs(void)
 }
 	/*	TODO: serial	*/
 
-
+#endif
 void push(unsigned char data)
 {
 	data_memory[SP]++;
@@ -455,93 +454,102 @@ void jump_to(unsigned char addr)
 	PC=addr;
 }
 
-#define HAVE_REQUEST (test_bit(IE0) || test_bit(TF0) || test_bit(IE1) || test_bit(TF1))
-#define HAVE_PRIORITY_REQUEST ( (test_bit(IE0) && test_bit(PX0)) ||\
-				(test_bit(TF0) && test_bit(PT0)) ||\
-				(test_bit(IE1) && test_bit(PX1)) ||\
-				(test_bit(TF1) && test_bit(PT1)) )
+
+#define EX0_REQUEST (test_bit(EX0) && ((test_bit(IT0) && test_bit(IE0))\
+			||(!test_bit(IT0) && !test_bit(INT0))))
+
+#define EX1_REQUEST (test_bit(EX1)&&((test_bit(IT1)&& test_bit(IE1))||!test_bit(INT1)))
+#define ET0_REQUEST (test_bit(ET0)&&test_bit(TF0))
+#define ET1_REQUEST (test_bit(ET1)&&test_bit(TF1))
+
+#define HAVE_REQUEST (EX0_REQUEST || EX1_REQUEST || ET0_REQUEST || ET1_REQUEST)
+
+
+#define EX0_PREQUEST (EX0_REQUEST && test_bit(PX0))
+#define EX1_PREQUEST (EX1_REQUEST && test_bit(PX1))
+#define ET0_PREQUEST (ET0_REQUEST && test_bit(PT0))
+#define ET1_PREQUEST (ET1_REQUEST && test_bit(PT1))
+
+#define HAVE_PREQUEST (EX0_PREQUEST || EX1_PREQUEST || ET0_PREQUEST || ET1_PREQUEST)
+
+
 
 static void do_int_requests(void)
 {
 
+	/* are interrupts enabled? */
 	if (test_bit(EA) == 0)
 		return;
-/*		going to interrupt?	*/
+	/* is there any request? */
 	if (HAVE_REQUEST == 0)
 		return;
-	if (interrupt_state == 2)
+	/* high priority request can't be interrupted */
+	if (interrupt_state & 0x2)
 		return;
-	if ((interrupt_state == 1) && (HAVE_PRIORITY_REQUEST == 0))
+	/* low priority request can be interrupted only by hight */
+	if ((interrupt_state == 1) && (HAVE_PREQUEST == 0))
 		return;
 
-	if (HAVE_PRIORITY_REQUEST == 1)
+	if (HAVE_PREQUEST == 1)
 		interrupt_state|=2;
-	else {
+	else
 		interrupt_state|=1;
-	}
 
 	push((unsigned char)(PC&0x00FF));
 	push((unsigned char)(PC>>8));
 
 /*		high priority		*/
-	if (test_bit(PX0) && test_bit(IE0)) {
-		interrupt_state=2;
-		printf("[emux]\tjumping to ext0\n");
+	if (EX0_PREQUEST) {
+		clr_bit(IE0);
+//		printf("[emux]\tjumping to ext0\n");
 		jump_to(EX0_ADDR);
 		return;
 	}
-	if (test_bit(PT0) && test_bit(TF0)) {
+	if (ET0_PREQUEST) {
 		clr_bit(TF0);
-		interrupt_state=2;
 //		printf("[emux]\tjumping to timer 0\n");
 		jump_to(ET0_ADDR);
 		return;
 	}
-	if (test_bit(PX1) && test_bit(IE1)) {
-		interrupt_state=2;
-		printf("[emux]\tjumping to ext1\n");
+	if (EX1_PREQUEST) {
+		clr_bit(IE0);
+//		printf("[emux]\tjumping to ext1\n");
 		jump_to(EX1_ADDR);
 		return;
 	}
-	if (test_bit(PT1) && test_bit(TF1)) {
+	if (ET1_PREQUEST) {
 		clr_bit(TF1);
-		interrupt_state=2;
-		printf("[emux]\tjumping to timer 1\n");
+//		printf("[emux]\tjumping to timer 1\n");
 		jump_to(ET1_ADDR);
 		return;
 	}
 /*		low priority		*/
-	if (test_bit(IE0)) {
-		interrupt_state=1;
-		printf("[emux]\tjumping to ext0\n");
+	if (EX0_REQUEST) {
+		clr_bit(IE0);
+//		printf("[emux]\tjumping to ext0\n");
 		jump_to(EX0_ADDR);
 		return;
 	}
-	if (test_bit(TF0)) {
+	if (ET0_REQUEST) {
 		clr_bit(TF0);
-		interrupt_state=1;
 //		printf("[emux]\tjumping to timer 0\n");
 		jump_to(ET0_ADDR);
 		return;
 	}
-	if (test_bit(IE1)) {
-		interrupt_state=1;
-		printf("[emux]\tjumping to ext1\n");
+	if (EX1_REQUEST) {
+		clr_bit(IE1);
+//		printf("[emux]\tjumping to ext1\n");
 		jump_to(EX1_ADDR);
 		return;
 	}
-	if (test_bit(TF1)) {
+	if (ET1_REQUEST) {
 		clr_bit(TF1);
-		interrupt_state=1;
-		printf("[emux]\tjumping to timer 1\n");
+//		printf("[emux]\tjumping to timer 1\n");
 		jump_to(ET1_ADDR);
 		return;
 	}
 
 	printf("[emux]\twtf?\n");
-
-
-
 }
 
 /*		<main execution loop>
@@ -555,8 +563,7 @@ void do_every_instruction_stuff(int times)
 
 	while (times){
 		counter++;
-		if (FORCE_READ)
-			module_import_port(3);
+
 /*		set_irqs();				*/
 		do_timers_stuff();
 		times--;
@@ -567,8 +574,6 @@ int do_few_instructions(int cycles)
 {
 	int decrement;
 	while (cycles > 0){
-		if (running == 0)
-			return 0;
 		decrement=opcodes[code_memory[PC]].time;
 		opcodes[code_memory[PC]].f(PC);
 
@@ -580,37 +585,38 @@ int do_few_instructions(int cycles)
 }
 /*		</main execution loop>		*/
 
+/*	remaining cycles to 'zero-time'	*/
+unsigned int remaining_machine_cycles;
+unsigned int remaining_sync_cycles;
+
 void alarm_handler(void)
 {
 
 	static int last=0;
 	int cnt;
-/*
-	static int angle=0;
-	gtk_label_set_angle(GTK_LABEL(file_label), angle);
-	angle++;
-	angle%=360;
-*/
-/*	static int alarm_calls=0;
 
-	alarm_calls++;
-	if (alarm_calls == SYNC_FREQ) {
-		printf("one second\n");
-		alarm_calls=0;
-	}
-*/
+
 	module_time_queue_perform();
-	if (running) {
-		gui_callback();
-		cnt=machine_freq/SYNC_FREQ+last;
-		last=do_few_instructions(cnt);
+
+
+	if (g_atomic_int_get(&running) == 0)
+		return;
+
+	gui_callback();
+	cnt=remaining_machine_cycles/remaining_sync_cycles;
+	last=do_few_instructions(cnt+last);
+	remaining_machine_cycles-=cnt;
+	remaining_sync_cycles--;
+
+	if (remaining_sync_cycles == 0) {
+		remaining_machine_cycles=Fosc;
+		remaining_sync_cycles=12*SYNC_FREQ;
 	}
 }
 
 void sigint_handler(int data)
 {
 	printf("[emux]\texiting because of keyboard interrupt\n");
-	module_destroy_all("keyboard interrupt");
 	exit(0);
 }
 
@@ -646,9 +652,8 @@ int main(int argc, char *argv[])
 	init_instructions();
 	init_machine();
 	modules_init();
-	printf("module_dir == %s\n", getenv("module_directory"));
+	printf("module_dir == %s\n", getenv("module_dir"));
 
-	machine_freq=MACHINE_FREQ_DEFAULT;
 	set_timer(SYNC_FREQ, alarm_handler);
 
 	gui_run(&argc, &argv);
@@ -658,16 +663,17 @@ int main(int argc, char *argv[])
 
 void start(void)
 {
-	running=1;
-	
+	remaining_machine_cycles=Fosc;
+	remaining_sync_cycles=12*SYNC_FREQ;
+	g_atomic_int_set(&running, 1);
 }
 void stop(void)
 {
-	running=0;
+	g_atomic_int_set(&running, 0);
 	do_reset();
 	export_all();
 }
 void pause(void)
 {
-	running=0;
+	g_atomic_int_set(&running, 0);
 }

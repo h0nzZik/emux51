@@ -1,13 +1,14 @@
 #ifndef EMUX51_H
 #define EMUX51_H
 
+#include <glib.h>
 
 #define CODE_LENGHT 64*1024
 #define DATA_LENGHT 256
 #define PORTS_CNT 4
 
 
-#define MACHINE_FREQ_DEFAULT 1000000
+//#define MACHINE_FREQ_DEFAULT 1000000
 #define SYNC_FREQ	50 /* [HZ] */
 
 
@@ -54,7 +55,7 @@
 #define PT0	0xB9
 #define PX0	0xB8
 
-/*	interrupt flags			*/
+/*	external interrupt falling-edge flag */
 #define IE0	0x89
 #define IE1	0x8B
 
@@ -84,19 +85,7 @@
 #define ET1_ADDR	0x001B
 #define SER_ADDR	0x0023
 
-#if 0
-/*	emulator data types	*/
-typedef unsigned char	data8;
-typedef unsigned short	data16;
-typedef unsigned long	data32;
 
-typedef unsigned char	ptr8;
-typedef unsigned short	ptr16;
-typedef unsigned long	ptr32;
-
-typedef ptr16 cptr;
-typedef ptr8  dptr;
-#endif
 
 /*	control variables	*/
 
@@ -104,7 +93,8 @@ typedef ptr8  dptr;
 extern int exporting;
 
 /*			*/
-extern int running;
+extern volatile gint G_GNUC_MAY_ALIAS running;
+
 extern int loaded;
 extern char hexfile[];
 extern int interrupt_state;

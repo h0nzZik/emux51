@@ -41,11 +41,10 @@ watch(GIOChannel *channel, GIOCondition condition, gpointer data)
 
 int set_timer(float freq, void (*callback)(void))
 {
-	printf("set timer, freq == %f\n", freq);
 	/*	create pipe	*/
 	if (arch_create_pipe(pipefd)){
 		printf("cannot create pipe\n");
-		return -1;
+		exit (1);
 	}
 	/*	wrap  pipe into the glib IO channels	*/
 	read_end=g_io_channel_unix_new(pipefd[0]);
