@@ -105,6 +105,7 @@ static void file_load(void *data)
 	int rval;
 	char *fname;
 	char *dirname;
+	char *newdir;
 	GtkWidget *file_dialog;
 	GtkWidget *filter;
 
@@ -117,19 +118,20 @@ static void file_load(void *data)
 				GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
 	gtk_dialog_set_default_response(
 				GTK_DIALOG(file_dialog), GTK_RESPONSE_OK);
-	/*	create HEX filter	*/
+
+	/*	create 'HEX' filter	*/
 	filter=gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "Intel HEX files");
 	gtk_file_filter_add_pattern(filter, "*.[Hh][Ee][Xx]");
 	gtk_file_chooser_add_filter(file_dialog, filter);
-	/*	create all files filter	*/
+
+	/*	create 'All Files' filter	*/
 	filter=gtk_file_filter_new();
 	gtk_file_filter_set_name(filter, "All files");
 	gtk_file_filter_add_pattern(filter, "*");
 	gtk_file_chooser_add_filter(file_dialog, filter);
 
-
-
+	/*	get HEX directory	*/
 	dirname=getenv("hex_dir");
 	if(dirname) {
 		gtk_file_chooser_set_current_folder(
@@ -139,15 +141,21 @@ static void file_load(void *data)
 	rval=gtk_dialog_run(GTK_DIALOG(file_dialog));
 	if (rval == GTK_RESPONSE_OK) {
 		fname=gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(file_dialog));
-		dirname=gtk_file_chooser_get_current_folder
+		newdir=gtk_file_chooser_get_current_folder
 			(GTK_FILE_CHOOSER(file_dialog));
 		if (load_hex(fname, code_memory, CODE_LENGHT) == 0) {
 			strncpy(hexfile, fname, PATH_MAX);
 			/*	set only file name as label	*/
-			set_file_label(fname+strlen(dirname)+1);
+			set_file_label(fname+strlen(newdir)+1);
 			do_reset();
 			refresh_dump();
 			loaded=1;
+
+			/*	save settings	*/
+			if (strcmp(newdir, dirname)) {
+				g_setenv("hex_dir", newdir, 1);
+				config_save();
+			}
 		} else {
 			loaded=0;
 			*hexfile=0;
@@ -202,6 +210,7 @@ static void gui_mod_ld(void *data)
 	char *fname;
 	int rval;
 	char *dir;
+	char *newdir;
 	char buff[20];
 
 	dialog=gtk_file_chooser_dialog_new("Select module", NULL,
@@ -231,7 +240,13 @@ static void gui_mod_ld(void *data)
 	rval=gtk_dialog_run(GTK_DIALOG(dialog));
 	if (rval == GTK_RESPONSE_OK) {
 		fname=gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+		newdir=gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(dialog));
 		module_new(fname);
+
+		if (strcmp(newdir, dir)) {
+			g_setenv("module_dir", newdir, 1);
+			config_save();
+		}
 	}
 	gtk_widget_destroy(dialog);
 

@@ -16,6 +16,7 @@
 
 
 		Status:
+*	Configuration loading/saving.
 *	Improved module interface
 *	Timers may be good now.
 *	Simple graphic interface.
@@ -45,7 +46,6 @@
 		TODO:
 *	!! Some PSW features are not implemented yet. Do it.
 *	Add led widget
-*	Fix external interrupts.
 *	Improve UI.
 *	Do a lot of instructions.
 *	[Do some timer stuff.]

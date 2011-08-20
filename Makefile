@@ -73,7 +73,8 @@ ${modules}:
 		`${PKG-CONFIG} --libs gtk+-2.0` -L${OUTDIR} -lwidgets
 log:
 	cat ${LOG}
-
+lines:
+	@ cat src/emux51/*.c src/modules/*.c src/widgets/*.c include/*.h Makefile | wc -l
 clean:
 	rm -f ${OBJ}/*.o
 	rm -f ${OBJ}/modules/*.o

@@ -1,7 +1,7 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
-char *config_read(char *variable);
-int config_parse(void);
 
+int config_parse(void);
+int config_save(void);
 
 #endif

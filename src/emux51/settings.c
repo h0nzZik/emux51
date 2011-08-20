@@ -14,6 +14,9 @@
 #define CFGNAME "emuxrc"
 #define CFGDIR ".emux51"
 
+
+const char *known_vars[]={ "module_dir", "hex_dir", NULL };
+
 char _configfile[PATH_MAX+3+strlen(CFGNAME)+strlen(CFGDIR)];
 
 char *configfile(void)
@@ -61,6 +64,30 @@ int config_parse(void)
 	}
 	fclose(fr);
 	return 0;
+}
+
+int config_save(void)
+{
+	int i;
+	char *value;
+	FILE *fw;
+	char buff[80];
+
+	/*	open file	*/
+	fw=fopen(configfile(), "wt");
+	if (fw == NULL){
+		printf("[emux]\tcan't save config to file %s\n", configfile());
+		return -1;
+	}
+	/*	save all known variables	*/
+	for (i=0; known_vars[i]!=NULL; i++) {
+		value=getenv(known_vars[i]);
+		if (value) {
+			fprintf(fw, "%s=%s\n", known_vars[i], value);
+		}
+	}
+	fclose(fw);
+	printf("[emux]\tconfig has been saved to file %s\n", configfile());
 }
 
 
