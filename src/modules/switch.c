@@ -2,19 +2,20 @@
 #include <string.h>
 #include <stdlib.h>
 #include <gtk/gtk.h>
+
 #include <module.h>
 #include <widgets/port_selector.h>
 
 typedef struct {
-	modid_t id;
-	emuf_t *f;
+	int id;
 
 	int port;
+	int ext_state;
+	GtkWidget *window;
 	GtkWidget *check_buttons[8];
-	char ext_state;
 } inst_t;
 
-static void toggled(GtkToggleButton *button, inst_t *in)
+static void toggled(GtkToggleButton *button, inst_t *self)
 {
 	int active;
 	int bit;
@@ -23,7 +24,7 @@ static void toggled(GtkToggleButton *button, inst_t *in)
 	/* looking for our bit	*/
 	bit=0;
 	for (i=0; i<8; i++){
-		if ((void *)in->check_buttons[i] == (void *)button) {
+		if ((void *)self->check_buttons[i] == (void *)button) {
 			bit=7-i;
 			break;
 		}
@@ -31,12 +32,11 @@ static void toggled(GtkToggleButton *button, inst_t *in)
 
 	active=gtk_toggle_button_get_active(button);
 	if (active) {
-		in->ext_state|=1<<bit;
+		self->ext_state|=1<<bit;
 	} else {
-		in->ext_state&=~(1<<bit);
+		self->ext_state&=~(1<<bit);
 	}
-	printf("there is now 0x%2x\n", in->ext_state);
-	if (in->f->write_port(in->id, in->port, in->ext_state))
+	if (write_port(self, self->port, self->ext_state))
 		printf("shit\n");
 }
 
@@ -47,14 +47,14 @@ static void port_select(PortSelector *ps, inst_t *self)
 	int i;
 
 	port=port_selector_get_port(ps);
-	printf("[switch:%d]\tport %d was selected\n", self->id.id, port);
-	if (self->f->alloc_bits(self->id, port, 0xFF)){
+	printf("[switch:%d]\tport %d was selected\n", self->id, port);
+	if (alloc_bits(self, port, 0xFF)){
 		printf("can't allocate port %d\n", port);
 		return;
 	}
 	/* reset port */
-	self->f->write_port(self->id, self->port, 0xFF);
-	self->f->free_bits(self->id, self->port, 0xFF);
+	write_port(self, self->port, 0xFF);
+	free_bits(self, self->port, 0xFF);
 	/* reset buttons */
 	for (i=0; i<8; i++) {
 		gtk_toggle_button_set_active
@@ -65,7 +65,7 @@ static void port_select(PortSelector *ps, inst_t *self)
 	
 }
 
-void * module_init(modid_t modid, void *cbs)
+int module_init(inst_t *self)
 {
 	int j;
 
@@ -73,12 +73,6 @@ void * module_init(modid_t modid, void *cbs)
 	GtkWidget *button;
 	GtkWidget *button_box;
 	GtkWidget *select;
-	inst_t *self;
-
-	self=g_malloc0(sizeof(inst_t));	
-	self->id=modid;
-	self->f=cbs;
-	self->f->set_space(self->id, self);
 
 	self->ext_state=0xFF;
 
@@ -106,25 +100,36 @@ void * module_init(modid_t modid, void *cbs)
 
 	/*	try to find empty port	*/
 	for(j=0; j<4; j++) {
-		if (self->f->alloc_bits(self->id, j, 0xFF) == 0){
+		if (alloc_bits(self, j, 0xFF) == 0){
 			printf("found at %d\n", j);
 			self->port=j;
 			port_selector_set_port(PORT_SELECTOR(select), j);
 			break;
 		}
 	}
-	if (j == 4)
-		self->f->crash(self->id, "no empty port found");
+	if (j == 4) {
+		fprintf(stderr, "[switch]\tno empty port found\n");
+		return -1;
+	}
 	gtk_widget_show_all(main_box);
-	return main_box;
+	self->window=gui_add(main_box, self, "switch panel");
+	return 0;
 }
 
 void module_exit(inst_t *self, const char *str)
 {
-	printf("[switch:%d] exiting because of %s\n", self->id.id, str);
+	printf("[switch:%d] exiting because of %s\n", self->id, str);
 
-	self->f->write_port(self->id, self->port, 0xFF);
-	self->f->free_bits(self->id, self->port, 0xFF);
+	write_port(self, self->port, 0xFF);
+	free_bits(self, self->port, 0xFF);
 
-	g_free(self);
+	gui_remove(self->window);
 }
+
+module_info_t module_info={
+	"switch panel",
+	M_SPACE_SIZE	(sizeof(inst_t)),
+	M_INIT		(module_init),
+	M_EXIT		(module_exit),
+	NULL,
+};

@@ -5,78 +5,77 @@
 #include <widgets/port_selector.h>
 
 typedef struct {
-	modid_t id;
-	emuf_t *f;
+	int id;
+	GtkWidget *window;
 	GtkWidget *sseg;
-	unsigned char port_no;
+	int port_no;
 	int invert;
-} mi_t;
+} instance;
 
-void import_segments(mi_t *in)
+void import_segments(instance *self)
 {
-	unsigned char segments;
-	segments=in->f->read_port(in->id, in->port_no);
-	if (in->invert)
+	char segments;
+	read_port(self, self->port_no, &segments);
+
+	if (self->invert)
 		segments=~segments;
-	seven_seg_set_segments(in->sseg, segments);
+	seven_seg_set_segments(self->sseg, segments);
 	
 }
 
-void module_read(mi_t *in, int port)
+void module_read(instance *self, int port)
 {
-	if (port != in->port_no)
+	if (port != self->port_no)
 		return;
-	import_segments(in);
+	import_segments(self);
 }
 
 
-static void port_select(PortSelector *ps, gpointer data)
+static void port_select(PortSelector *ps, instance *self)
 {
-	mi_t *in;
-	in=data;
-	in->port_no=port_selector_get_port(ps);
-	import_segments(in);
+	self->port_no=port_selector_get_port(ps);
+	import_segments(self);
 }
 
 
-void *module_init(modid_t modid, emuf_t *funcs)
+void *module_init(instance *self)
 {
 	/*	init module	*/
 	GtkWidget *select;
 	GtkWidget *vbox;
 	GtkWidget *ibox;
 
-	mi_t *in;
-	in=g_malloc0(sizeof(mi_t));
-	in->f=funcs;
-	in->id=modid;
-	in->invert=1;
-	if (in->f->handle_event(in->id, "read", module_read)){
-		in->f->crash(in->id, "handle");
-	}
+	self->invert=1;
+
 
 	vbox=gtk_hbox_new(FALSE, 0);
 	ibox=gtk_vbox_new(FALSE, 0);
 
 	select=v_port_selector_new();
 	g_signal_connect(select, "port-select",
-			G_CALLBACK(port_select), in);
+			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(vbox), select, FALSE, FALSE, 0);
 
 	gtk_box_pack_start(GTK_BOX(vbox), ibox, FALSE, FALSE, 0);
 	gtk_container_set_border_width(GTK_CONTAINER(ibox), 10);
-	in->sseg=seven_seg_new();
-	gtk_box_pack_start(GTK_BOX(ibox), in->sseg, FALSE, FALSE, 0);
-
+	self->sseg=seven_seg_new();
+	gtk_box_pack_start(GTK_BOX(ibox), self->sseg, FALSE, FALSE, 0);
 
 	gtk_widget_show_all(vbox);
-	in->f->set_space(in->id, in);
-	in->f->set_name(in->id, "7 segmented display");
+	self->window=gui_add(vbox, self, "7 segmented display");
 
-	return vbox;
+	return 0;
 }
-void module_exit(mi_t *in, const char *str)
+void module_exit(instance *self, const char *str)
 {
-	printf("[7seg:%d]\texiting because of %s\n",in->id.id, str);
-	g_free(in);
+	printf("[7seg:%d]\texiting because of %s\n",self->id, str);
+	gui_remove(self->window);
 }
+
+module_info_t module_info={
+	"7 segmented display",
+	M_SPACE_SIZE	(sizeof(instance)),
+	M_INIT		(module_init),
+	M_EXIT		(module_exit),
+	M_PORT_CHANGED	(module_read),
+};

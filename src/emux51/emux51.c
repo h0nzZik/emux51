@@ -47,6 +47,8 @@ unsigned char port_collectors[PORTS_CNT];
 /*	port external state	*/
 unsigned char port_externals[PORTS_CNT];
 //unsigned char port_fall[PORTS_CNT];
+/*	P3 falling edge	*/
+unsigned char fall;
 /*	machine cycle counter	*/
 unsigned long counter=0;
 
@@ -89,7 +91,6 @@ int exporting=0;
 
 void update_port(int port)
 {
-	unsigned char fall;
 	unsigned char old=port_collectors[port];
 
 	port_collectors[port]=port_latches[port]&port_externals[port];
@@ -121,11 +122,14 @@ void write_data(unsigned addr, char data)
 {
 	int port;
 
-	data_memory[addr]=data;
+
 	if(isport(addr)){
+//		printf("program write to latch: 0x%x\n", data);
 		port=addr_to_port(addr);
 		port_latches[port]=data;
 		update_port(port);
+	} else {
+		data_memory[addr]=data;
 	}
 }
 unsigned char read_code(unsigned addr)
@@ -220,7 +224,10 @@ void set_bit(unsigned char addr)
 	byte=addr_to_bit_byte(addr);
 	bit=addr_to_bit_bit(addr);
 
-	data=data_memory[byte];
+	if (isport(byte))	
+		data=port_latches[addr_to_port(byte)];
+	else
+		data=data_memory[byte];
 	data|=1<<bit;
 	write_data(byte, data);
 
@@ -235,7 +242,10 @@ void clr_bit(unsigned char addr)
 	byte=addr_to_bit_byte(addr);
 	bit=addr_to_bit_bit(addr);
 
-	data=data_memory[byte];
+	if (isport(byte))	
+		data=port_latches[addr_to_port(byte)];
+	else
+		data=data_memory[byte];
 	data&=~(1<<bit);
 	write_data(byte, data);
 }
@@ -247,8 +257,11 @@ void neg_bit(unsigned char addr)
 	unsigned char data;
 
 	byte=addr_to_bit_byte(addr);
-	bit=addr_to_bit_bit(addr);	
-	data=data_memory[byte];
+	bit=addr_to_bit_bit(addr);
+	if (isport(byte))	
+		data=port_latches[addr_to_port(byte)];
+	else
+		data=data_memory[byte];
 	data^=1<<bit;
 	write_data(byte, data);
 }
@@ -306,7 +319,7 @@ inline int timer_0_event(void)
 {
 	if ((data_memory[TMOD]&0x04) == 0)
 		return 1;
-	if ((port_fall[3]&0x10) == 1)
+	if ((fall&0x10) == 1)
 		return 1;
 	return 0;
 }
@@ -315,7 +328,7 @@ inline int timer_1_event(void)
 {
 	if ((data_memory[TMOD]&0x40) == 0)
 		return 1;
-	if ((port_fall[3]&0x20) == 1)
+	if ((fall&0x20) == 1)
 		return 1;
 	return 0;
 }
@@ -578,7 +591,7 @@ int do_few_instructions(int cycles)
 		opcodes[code_memory[PC]].f(PC);
 
 		do_every_instruction_stuff(decrement);
-		module_op_queue_perform(decrement);
+		cycle_queue_perform(decrement);
 		cycles-=decrement;
 	}
 	return cycles;
@@ -596,7 +609,7 @@ void alarm_handler(void)
 	int cnt;
 
 
-	module_time_queue_perform();
+	time_queue_perform();
 
 
 	if (g_atomic_int_get(&running) == 0)

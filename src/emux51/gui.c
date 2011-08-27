@@ -60,6 +60,7 @@ char last_hexfile_dir[PATH_MAX];
 static void gui_set_stop(void)
 {
 	stop();
+	printf("stopped\n");
 	gtk_button_set_label(GTK_BUTTON(run_button), "Run");
 }
 static void gui_set_run(void)
@@ -87,7 +88,6 @@ static void mw_destroy(GtkWidget *widget, gpointer data)
 /*			file load			*/
 static void set_file_label(const char *str)
 {
-	int len;
 	char buff[20];
 
 	strncpy(buff, str, 20);
@@ -107,10 +107,12 @@ static void file_load(void *data)
 	char *dirname;
 	char *newdir;
 	GtkWidget *file_dialog;
-	GtkWidget *filter;
+	GtkFileFilter *filter;
+
+	printf("load\n");
 
 	gui_set_stop();
-
+	printf("after stop\n");
 	/*	create dialog	*/
 	file_dialog=gtk_file_chooser_dialog_new("Select file", NULL,
 				GTK_FILE_CHOOSER_ACTION_OPEN,
@@ -119,17 +121,20 @@ static void file_load(void *data)
 	gtk_dialog_set_default_response(
 				GTK_DIALOG(file_dialog), GTK_RESPONSE_OK);
 
+	printf("after response\n");
 	/*	create 'HEX' filter	*/
 	filter=gtk_file_filter_new();
-	gtk_file_filter_set_name(filter, "Intel HEX files");
-	gtk_file_filter_add_pattern(filter, "*.[Hh][Ee][Xx]");
-	gtk_file_chooser_add_filter(file_dialog, filter);
+	gtk_file_filter_set_name(GTK_FILE_FILTER(filter), "Intel HEX files");
+	gtk_file_filter_add_pattern(GTK_FILE_FILTER(filter), "*.[Hh][Ee][Xx]");
+	gtk_file_chooser_add_filter(
+			GTK_FILE_CHOOSER(file_dialog), GTK_FILE_FILTER(filter));
 
 	/*	create 'All Files' filter	*/
 	filter=gtk_file_filter_new();
-	gtk_file_filter_set_name(filter, "All files");
-	gtk_file_filter_add_pattern(filter, "*");
-	gtk_file_chooser_add_filter(file_dialog, filter);
+	gtk_file_filter_set_name(GTK_FILE_FILTER(filter), "All files");
+	gtk_file_filter_add_pattern(GTK_FILE_FILTER(filter), "*");
+	gtk_file_chooser_add_filter(
+			GTK_FILE_CHOOSER(file_dialog), GTK_FILE_FILTER(filter));
 
 	/*	get HEX directory	*/
 	dirname=getenv("hex_dir");
@@ -206,7 +211,7 @@ static void run_pause_hndl(void *data)
 static void gui_mod_ld(void *data)
 {
 	GtkWidget *dialog;
-	GtkWidget *filter;
+	GtkFileFilter *filter;
 	char *fname;
 	int rval;
 	char *dir;
@@ -221,14 +226,14 @@ static void gui_mod_ld(void *data)
 	/*	create .dll or .so filter	*/
 	sprintf(buff, "*%s", MODULE_EXTENSION);
 	filter=gtk_file_filter_new();
-	gtk_file_filter_set_name(filter, "Dynamic libraries");
-	gtk_file_filter_add_pattern(filter, buff);
-	gtk_file_chooser_add_filter(dialog, filter);
+	gtk_file_filter_set_name(GTK_FILE_FILTER(filter), "Dynamic libraries");
+	gtk_file_filter_add_pattern(GTK_FILE_FILTER(filter), buff);
+	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), GTK_FILE_FILTER(filter));
 	/*	create all files filter	*/
 	filter=gtk_file_filter_new();
-	gtk_file_filter_set_name(filter, "All files");
-	gtk_file_filter_add_pattern(filter, "*");
-	gtk_file_chooser_add_filter(dialog, filter);
+	gtk_file_filter_set_name(GTK_FILE_FILTER(filter), "All files");
+	gtk_file_filter_add_pattern(GTK_FILE_FILTER(filter), "*");
+	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), GTK_FILE_FILTER(filter));
 
 	
 	/*	try to set	*/
@@ -241,15 +246,15 @@ static void gui_mod_ld(void *data)
 	if (rval == GTK_RESPONSE_OK) {
 		fname=gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 		newdir=gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(dialog));
-		module_new(fname);
-
+		if(module_new(fname)) {
+			printf("can't load module\n");
+		} 
 		if (dir == NULL || strcmp(newdir, dir)) {
 			g_setenv("module_dir", newdir, 1);
 			config_save();
 		}
 	}
 	gtk_widget_destroy(dialog);
-
 }
 
 static void dump_view(gpointer data, guint action, GtkWidget *button)
@@ -413,34 +418,32 @@ void gui_callback(void)
 static gboolean 
 gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * data)
 {
-	module_destroy(data, "You were killed dude");
+	module_destroy(data, "delete-event");
 
 //	return FALSE;
 	return TRUE;
 }
 
 /*	add module into GUI scheme	*/
-void * gui_add(void *object, void *module)
+void * gui_add(void *object, void *delete_data, const char *title)
 {
 	GtkWidget *window;
 
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(window), "module window\n");
+	gtk_window_set_title(GTK_WINDOW(window), title);
 	gtk_container_add(GTK_CONTAINER(window), object);
 	g_signal_connect(window, "delete-event",
-			G_CALLBACK(gui_module_delete_event), module);
+			G_CALLBACK(gui_module_delete_event), delete_data);
 
 	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
 	gtk_widget_show(window);
 
 	return window;
 }
-void gui_set_window_title(void *window, const char *title)
-{
-	gtk_window_set_title(GTK_WINDOW(window), title);
-}
+
 void gui_remove(void *window)
 {
-	printf("gui_remove\n");
 	gtk_widget_destroy(window);
 }
+
+

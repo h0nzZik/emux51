@@ -105,10 +105,11 @@ extern unsigned short PC;
 
 /*extern unsigned char *SP;*/
 
-
+#if 0
 /*	port operations			*/
 unsigned char read_port (int port);
 void write_port(int port, char data);
+#endif
 
 /*	data memory operations		*/
 unsigned char read_data (unsigned addr);
@@ -159,7 +160,9 @@ extern unsigned char data_memory[];
 extern unsigned char port_latches[PORTS_CNT];
 extern unsigned char port_collectors[PORTS_CNT];
 extern unsigned char port_externals[PORTS_CNT];
-extern unsigned char port_fall[PORTS_CNT];
+//extern unsigned char port_fall[PORTS_CNT];
+
+void update_port(int port);
 
 void alarm_handler(void);
 

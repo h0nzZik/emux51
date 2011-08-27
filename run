@@ -1,0 +1,2 @@
+#!/bin/sh
+env LD_LIBRARY_PATH=`pwd`/out/nixies out/nixies/emux51

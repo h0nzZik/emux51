@@ -14,6 +14,9 @@
 #define CFGNAME "emuxrc"
 #define CFGDIR ".emux51"
 
+#ifndef HOME_VAR
+	#define HOME_VAR "HOME"
+#endif
 
 const char *known_vars[]={ "module_dir", "hex_dir", NULL };
 
@@ -21,10 +24,11 @@ char _configfile[PATH_MAX+3+strlen(CFGNAME)+strlen(CFGDIR)];
 
 char *configfile(void)
 {
-	char *dir=getenv("HOME");
+	char *dir=getenv(HOME_VAR);
 
 	if (dir)
-		sprintf(_configfile, "%s/%s/%s", dir, CFGDIR, CFGNAME);
+		sprintf(_configfile, "%s%c%s%c%s",
+			dir, G_DIR_SEPARATOR, CFGDIR, G_DIR_SEPARATOR, CFGNAME);
 	else
 		sprintf(_configfile, "./.%s", CFGNAME);
 	return _configfile;
@@ -71,7 +75,6 @@ int config_save(void)
 	int i;
 	char *value;
 	FILE *fw;
-	char buff[80];
 
 	/*	open file	*/
 	fw=fopen(configfile(), "wt");
@@ -88,6 +91,7 @@ int config_save(void)
 	}
 	fclose(fw);
 	printf("[emux]\tconfig has been saved to file %s\n", configfile());
+	return 0;
 }
 
 

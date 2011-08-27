@@ -2,6 +2,7 @@
  * emux51.c - Alarm integration into overall scheme.
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <glib.h>

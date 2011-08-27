@@ -6,10 +6,13 @@ ifeq (${arch}, windows)
 	PKG-CONFIG=mingw32-pkg-config
 	CC=i686-pc-mingw32-gcc
 
-	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm -mwindows
+	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm -mwindows 
 	OUTDIR=out/windows
 	OUT=out/windows/emux51.exe
 	DEX=.dll
+	HOME_VAR=USERPROFILE
+#	BUILD=-export-all-symbols
+
 else
 	PKG-CONFIG=pkg-config
 	arch=nixies
@@ -19,9 +22,11 @@ else
 	OUTDIR=out/nixies
 	PIC=-fPIC
 	DEX=.so
+	HOME_VAR=HOME
+#	BUILD=-rdynamic
 endif
 
-DEFINES=-DMODULE_EXTENSION=\"${DEX}\"
+DEFINES=-DMODULE_EXTENSION=\"${DEX}\" -DHOME_VAR=\"${HOME_VAR}\"
 
 OBJ=.obj/${arch}
 LOG=out/${arch}/log.txt
@@ -41,7 +46,8 @@ widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o
 
 build:	${targets} gui alarm
 	@ echo linking..
-	@ ${CC} -L${OUTDIR} ${objects} ${LDFLAGS}  -o ${OUT} >> ${LOG}
+	@ ${CC} ${BUILD} -L${OUTDIR} -lwidgets ${objects} ${LDFLAGS}  -o ${OUT}	\
+	  >> ${LOG}
 
 build_all: widgets build modules
 
@@ -61,16 +67,16 @@ ${widgets}:
 	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
 
 
-modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod
+modules=3x7seg.mod 7seg.mod led.mod switch.mod
 
 modules: ${modules}
 ${modules}:
 	@ echo ${CC} src/modules/${@:.mod=.c}
-	@ ${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/modules/${@:.mod=.o}\
+	@ ${CC} -DBUILDING_MODULE ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/modules/${@:.mod=.o}\
 		src/modules/${@:.mod=.c}
 	@ echo linking ${OBJ}/modules/${@:.mod=.o}
-	@ ${CC} -shared -o ${OUTDIR}/modules/${@:.mod=${DEX}} ${OBJ}/modules/${@:.mod=.o}\
-		`${PKG-CONFIG} --libs gtk+-2.0` -L${OUTDIR} -lwidgets
+	@ ${CC} -shared -L${OUTDIR} -lwidgets -o ${OUTDIR}/modules/${@:.mod=${DEX}} ${OBJ}/modules/${@:.mod=.o}\
+		`${PKG-CONFIG} --libs gtk+-2.0`
 log:
 	cat ${LOG}
 lines:

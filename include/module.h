@@ -3,95 +3,87 @@
 
 #define MODULE_CNT 32
 #include <emux51.h>
+//#include <gui.h>
+
+#define M_INIT(x)		((int (*)(void *))x)
+#define M_EXIT(x)		((int(*)(void *, const char *))x)
+#define M_PORT_CHANGED(x)	((int(*)(void *, int))x)
+#define M_QUEUE(x)		((void (*)(void *, void *))x)
+#define M_SPACE_SIZE(x)		((size_t)x)
 
 
 typedef struct {
-/*	handle for dynamic linker	*/
+	char *name;
+	size_t space_size;
+	int (*init)(void *self);
+	int (*exit)(void *self, const char *reason);
+	int (*port_changed)(void *self, int port);
+} module_info_t;
+
+
+typedef struct {
+//	modid_t id;
 	void *handle;
-/*	now only idx to array		*/
 	int id;
-} modid_t;
-
-
-/*
- *	Functions, provided by emulator for module.
- */
-
-typedef struct {
-	char (*read_port)   (modid_t id, int port);
-	int  (*write_port)  (modid_t id, int port, char data);
-	int  (*alloc_bits)  (modid_t id, int port, char mask);
-	int  (*free_bits)   (modid_t id, int port, char mask);
-	int  (*handle_event)
-		(modid_t id, const char *event, void (*handle)());
-	int  (*cycle_queue_add)
-		    (modid_t id, unsigned cycles, void (*event)(void * space));
-	int  (*time_queue_add)
-		    (modid_t id, unsigned time, void (*event)(void * space));
-	int  (*set_space)   (modid_t id, void *space);
-	void  (*set_name)    (modid_t id, const char *name);
-	void (*crash)	    (modid_t id, const char *reason);
-	
-
-} emuf_t;
-
-
-/*
- *	Functions, provided by the module itself.
- *
- *	See that 'read' function has type 'void'.
- *	These calls are only notifications for module.
- *	Module itself perform own operation.
- *
- *	Note that if emulator call modf_t::read,
- *	module will perform 'write' operation.
- */
-
-typedef struct {
-	/*	only these functions are necessary	*/
-	void *(*init) (modid_t id, emuf_t *callbacks);
-	void (*exit) (void *space, const char *reason);	
-	/*		*/
-	void (*write)(void *space, int port);
-	void (*read) (void *space, int port);
-} modf_t;
-
-
-
-typedef struct {
-	modid_t id;
 	char mask[PORTS_CNT];
-	emuf_t callbacks;
-	modf_t f;
 	void *space;
-	void *window;
-	const char *name;
+	module_info_t *info;
+//	emuf_t callbacks;
+//	modf_t f;
+
+//	void *window;
+//	const char *name;
 
 } module_t;
 
 /*	delta list type	*/
 typedef struct DLIST {
-	void (*f)(void *space);
+	void (*f)(void *space, void *data);
 	unsigned dt;
-	void *space;
+	int idx;
+	void *data;
 	struct DLIST *next;
 	
 } dlist_t;
 
+/*
+int read_port(void *space, int port, char *data);
+int write_port(void *space, int port, char data);
+
+int alloc_bits(void *space, int port, char mask);
+int free_bits(void *space, int port, char mask);
+
+int time_queue_add(void *space, unsigned ms,
+			void (*f)(void *space, void *data), void *data);
+int cycle_queue_add(void *space, unsigned cycles,
+			void (*f)(void *space, void *data), void *data);
+*/
+#ifdef BUILDING_MODULE
+int (*read_port)(void *space, int port, char *data)=NULL;
+int (*write_port)(void *space, int port, char data)=NULL;
+
+int (*alloc_bits)(void *space, int port, char mask)=NULL;
+int (*free_bits)(void *space, int port, char mask)=NULL;
+
+int (*time_queue_add)(void *space, unsigned ms,
+			void (*f)(void *space, void *data), void *data)=NULL;
+int (*cycle_queue_add)(void *space, unsigned cycles,
+			void (*f)(void *space, void *data), void *data)=NULL;
+void * (*gui_add)(void *object, void *delete_data, const char *title)=NULL;
+void (*gui_remove)(void *window);
+#else
 
 int module_new(char *path);
-int module_destroy(module_t *mod, const char *reason);
+int module_destroy(void *space, const char *reason);
 
-void module_import_port(int port);
 void module_export_port(int port);
 
-
-void module_op_queue_perform(int steps);
-void module_time_queue_perform(void);
+void cycle_queue_perform(int steps);
+void time_queue_perform(void);
 
 
 int modules_init(void);
 void module_destroy_all(const char *reason);
-
+#endif
 
 #endif

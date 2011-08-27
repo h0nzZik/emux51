@@ -37,7 +37,7 @@ int setup_timer(float freq, void (*callback)(void))
 void *load_lib(const char *path)
 {
 	void *lib;
-	lib=dlopen(path, RTLD_LAZY|RTLD_LOCAL);
+	lib=dlopen(path, RTLD_NOW|RTLD_LOCAL);
 	return lib;
 }
 

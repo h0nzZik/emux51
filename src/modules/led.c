@@ -10,9 +10,9 @@
 #include <widgets/port_selector.h>
 
 typedef struct {
-	modid_t id;
-	emuf_t *f;
+	int id;
 
+	GtkWidget *window;
 	GtkWidget *da;
 	GtkWidget *label;
 	char port_data;
@@ -87,71 +87,94 @@ static void da_expose(GtkWidget *widget, GdkEventExpose *event, my_t *in)
 }
 
 
-void module_read(my_t *in, int port)
+void module_read(my_t *self, int port)
 {
-	if (port != in->port)
+	if (port != self->port)
 		return;
-	in->port_data=in->f->read_port(in->id, port);
-	update_area(in->da, in->port_data, in);
+
+	if (read_port(self, port, &self->port_data)) {
+		printf("[led]\tcan't read port\n");
+	}
+	update_area(self->da, self->port_data, self);
 }
 
-static void port_select(PortSelector *ps, my_t *in)
+static void port_select(PortSelector *ps, my_t *self)
 {
-	in->port=port_selector_get_port(ps);
-	in->port_data=in->f->read_port(in->id, in->port);
-	update_area(in->da, in->port_data, in);
+	self->port=port_selector_get_port(ps);
+
+	if (read_port(self, self->port, &self->port_data)) {
+		printf("[led]\tcan't read port\n");
+	}
+	update_area(self->da, self->port_data, self);
 }
 
 
-void module_exit(my_t *in, char *reason)
+void module_exit(my_t *self, char *reason)
 {
-	printf("[led]\tI must go, because of %s\n.\t\tBye.\n", reason?reason:"_what_?");
-	g_free(in);
+	printf("[led]\texiting because of %s.\n", reason?reason:"_what_?");
+	gui_remove(self->window);
+//	g_free(in);
 }
 
-void * module_init(modid_t modid, void *cbs)
+//void * module_init(modid_t modid, void *cbs)
+int module_init(my_t *self)
 {
 	GtkWidget *box;
 	GtkWidget *select;
-	my_t *in;
+/*	my_t *in;
 
 	in=g_malloc0(sizeof(my_t));
 	in->id=modid;
 	in->f=cbs;
-
-	in->port_data=0xFF;
+*/
+	self->port_data=0xFF;
 
 	box=gtk_vbox_new(FALSE, 0);
 	gtk_container_set_border_width(GTK_CONTAINER(box), 5);
-	in->da=gtk_drawing_area_new();
-	gtk_widget_set_size_request(in->da, 100, 10);
-	g_signal_connect(in->da, "expose_event",
-			G_CALLBACK(da_expose), in);
+	self->da=gtk_drawing_area_new();
+	gtk_widget_set_size_request(self->da, 100, 10);
+	g_signal_connect(self->da, "expose_event",
+			G_CALLBACK(da_expose), self);
 	select=h_port_selector_new();
 	g_signal_connect(select, "port-select",
-			G_CALLBACK(port_select), in);
+			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(box), select, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(box), in->da, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(box), self->da, TRUE, TRUE, 0);
 
+/*
 	if (in->f->handle_event(in->id, "read", module_read)){
 		in->f->crash(in->id, "handling");
 	}
-
-	memset(&in->empty_c, 0xFF, sizeof(GdkColor));
-	memset(&in->filler_c, 0x00, sizeof(GdkColor));
+*/
+	/*	collor selection	*/
+	memset(&self->empty_c, 0xFF, sizeof(GdkColor));
+	memset(&self->filler_c, 0x00, sizeof(GdkColor));
 	switch(rand()%3) {
 		case 0:
-			in->filler_c.red=0xFFFF;
+			self->filler_c.red=0xFFFF;
 			break;
 		case 1:
-			in->filler_c.green=0xFFFF;
+			self->filler_c.green=0xFFFF;
 			break;
 		case 2:
-			in->filler_c.blue=0xFFFF;
+			self->filler_c.blue=0xFFFF;
 			break;
 	}
 	gtk_widget_show_all(box);
-	in->f->set_space(in->id, in);
-	in->f->set_name(in->id, "LED panel");
-	return box;
+
+	self->window=gui_add(box, self, "LED panel");
+//	in->f->set_space(in->id, in);
+//	in->f->set_name(in->id, "LED panel");
+//	return box;
+	return 0;
 }
+
+
+module_info_t module_info={
+	"LED panel",
+	M_SPACE_SIZE	(sizeof(my_t)),
+	M_INIT		(module_init),
+	M_EXIT		(module_exit),
+	M_PORT_CHANGED	(module_read),
+};
+

@@ -16,8 +16,8 @@
 
 
 		Status:
+*	Module interface was changed.
 *	Configuration loading/saving.
-*	Improved module interface
 *	Timers may be good now.
 *	Simple graphic interface.
 *	Interrupts was fixed, it works wine.
