@@ -44,6 +44,7 @@
 *	* 7 segmented display
 *	* 3x7seg dynamic display
 *	* 4x7seg dynamic display
+*	* 8x7seg dynamic display
 
 		TODO:
 *	!! Some PSW features are not implemented yet. Do it.
