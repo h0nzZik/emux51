@@ -80,6 +80,7 @@ static gboolean gui_delete_event(GtkWidget *widget, GdkEvent *event, gpointer da
 
 static void mw_destroy(GtkWidget *widget, gpointer data)
 {
+	printf("destroying all..\n");
 	module_destroy_all("clicked");
 	gtk_main_quit();
 }
@@ -109,10 +110,8 @@ static void file_load(void *data)
 	GtkWidget *file_dialog;
 	GtkFileFilter *filter;
 
-	printf("load\n");
 
 	gui_set_stop();
-	printf("after stop\n");
 	/*	create dialog	*/
 	file_dialog=gtk_file_chooser_dialog_new("Select file", NULL,
 				GTK_FILE_CHOOSER_ACTION_OPEN,
@@ -121,7 +120,6 @@ static void file_load(void *data)
 	gtk_dialog_set_default_response(
 				GTK_DIALOG(file_dialog), GTK_RESPONSE_OK);
 
-	printf("after response\n");
 	/*	create 'HEX' filter	*/
 	filter=gtk_file_filter_new();
 	gtk_file_filter_set_name(GTK_FILE_FILTER(filter), "Intel HEX files");

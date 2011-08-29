@@ -146,9 +146,11 @@ GtkWidget *seven_seg_new(void)
 void seven_seg_set_segments(GtkWidget *widget, guchar data)
 {
 	SevenSeg *instance;
-	instance=SEVEN_SEG(widget);
-	instance->lighting_segments=data;
 
+	instance=SEVEN_SEG(widget);
+	if(instance->lighting_segments == data)
+		return;
+	instance->lighting_segments=data;
 	if(widget->window == NULL) {
 		printf("7seg_widget:\tcan't redraw NULL\n");
 		return;

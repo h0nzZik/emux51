@@ -16,6 +16,7 @@
 
 
 		Status:
+*	Fixed bug in 'addc' instructions.
 *	Module interface was changed.
 *	Configuration loading/saving.
 *	Timers may be good now.
@@ -42,6 +43,7 @@
 *	* Switches
 *	* 7 segmented display
 *	* 3x7seg dynamic display
+*	* 4x7seg dynamic display
 
 		TODO:
 *	!! Some PSW features are not implemented yet. Do it.

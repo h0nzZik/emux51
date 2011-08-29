@@ -14,10 +14,10 @@ typedef struct {
 	int id;
 
 	int port_no;
-	char lighting_segments[3];
-	int history[3];
+	char lighting_segments[4];
+	int history[4];
 	GtkWidget *window;
-	GtkWidget *ssegs[3];
+	GtkWidget *ssegs[4];
 	int mask;
 	
 } instance;
@@ -29,10 +29,10 @@ void off_handler(instance *self, void *data)
 {
 	int i;
 
-	for(i=0; i<3; i++){
+	for(i=0; i<4; i++){
 		if ((self->mask>>i)&1 && self->lighting_segments[i] && !self->history[i]){
-			self->lighting_segments[i]=0;		
-			seven_seg_set_segments(self->ssegs[2-i], 0);
+			self->lighting_segments[i]=0;
+			seven_seg_set_segments(self->ssegs[3-i], 0);
 		}
 		else {
 			self->history[i]=0;	
@@ -60,11 +60,11 @@ void import_segments(instance *self)
 	mask=data>>4;
 	light=~decode_arr[value];
 
-	for (i=0; i<3; i++) {
+	for (i=0; i<4; i++) {
 		/*	light	*/
 		if (((mask>>i)&1) == 0) {
 			if (self->lighting_segments[i]!=light) {
-				seven_seg_set_segments(self->ssegs[2-i], light);
+				seven_seg_set_segments(self->ssegs[3-i], light);
 				self->lighting_segments[i]=light;
 			}
 			self->history[i]=1;
@@ -89,7 +89,7 @@ static void port_select(PortSelector *ps, instance *self)
 	memset(self->lighting_segments, 0, sizeof(self->lighting_segments));
 
 	/*	it was turned off	*/
-	for(i=0; i<3; i++){
+	for(i=0; i<4; i++){
 		seven_seg_set_segments(self->ssegs[i], 0);
 	}
 	self->mask=0xFF;
@@ -116,7 +116,7 @@ void *module_init(instance *self)
 			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(hbox), select, FALSE, FALSE, 0);
 
-	for(i=0; i<3; i++) {
+	for(i=0; i<4; i++) {
 		self->ssegs[i]=seven_seg_new();
 		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 10);
 	}
@@ -124,18 +124,18 @@ void *module_init(instance *self)
 	time_queue_add(self, 200, M_QUEUE(off_handler), NULL);
 	
 	gtk_widget_show_all(hbox);
-	self->window=gui_add(hbox, self, "3x7seg panel");
+	self->window=gui_add(hbox, self, "4x7seg panel");
 	return 0;
 }
 int module_exit(instance *self, const char *str)
 {
-	printf("[3x7seg:%d]\texiting because of %s\n", self->id, str);
+	printf("[4x7seg:%d]\texiting because of %s\n", self->id, str);
 	gui_remove(self->window);
 	return 0;
 }
 
 module_info_t module_info={
-	"3x7seg panel",
+	"4x7seg panel",
 	M_SPACE_SIZE	(sizeof(instance)),
 	M_INIT		(module_init),
 	M_EXIT		(module_exit),

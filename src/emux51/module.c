@@ -393,8 +393,14 @@ int module_destroy(void *space, const char *reason)
 	rmid_queue(&time_queue, get_id(space));
 	rmid_queue(&inst_queue, get_id(space));
 
-	if (mod->info->exit)
+
+
+	if (mod->info == NULL) {
+		printf("wtf?\n");
+	}
+	if (mod->info->exit){
 		mod->info->exit(mod->space, reason);
+	}
 
 /*		free alloced bits	*/
 	for(i=0; i<4; i++) {
@@ -414,8 +420,10 @@ void module_destroy_all(const char *reason)
 	int i;
 
 	for (i=0; i<MODULE_CNT; i++) {
-		if (modules[i].handle)
-			module_destroy(modules+i, reason);
+		if (modules[i].handle){
+			printf("destroying %d\n", i);
+			module_destroy(modules[i].space, reason);
+		}
 	}
 }
 

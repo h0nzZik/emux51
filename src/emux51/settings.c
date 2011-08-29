@@ -58,7 +58,7 @@ int config_parse(void)
 		while(isspace(buff[--len]))
 			buff[len]='\0';
 
-		printf("putenving %s\n", buff);
+/*		printf("putenving %s\n", buff);*/
 		if (putenv(buff)){
 			/* probably OOM */
 			g_free(buff);

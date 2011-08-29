@@ -113,20 +113,13 @@ void module_exit(my_t *self, char *reason)
 {
 	printf("[led]\texiting because of %s.\n", reason?reason:"_what_?");
 	gui_remove(self->window);
-//	g_free(in);
 }
 
-//void * module_init(modid_t modid, void *cbs)
 int module_init(my_t *self)
 {
 	GtkWidget *box;
 	GtkWidget *select;
-/*	my_t *in;
 
-	in=g_malloc0(sizeof(my_t));
-	in->id=modid;
-	in->f=cbs;
-*/
 	self->port_data=0xFF;
 
 	box=gtk_vbox_new(FALSE, 0);

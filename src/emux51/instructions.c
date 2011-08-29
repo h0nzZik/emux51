@@ -262,6 +262,7 @@ void xchd_a_at_rx(unsigned short idx)
 	rdata&=0xF0;
 	rdata|=read_Acc()&0x0F;
 
+
 	write_data(addr, rdata);
 	write_Acc(adata);
 	PC++;
@@ -538,27 +539,36 @@ void pop_addr(unsigned short idx)
 void add_a_imm8(unsigned short idx)
 {
 	unsigned char increment;
+	int c;
 
 	increment=read_code(idx+1);
-	increment+=read_code(idx)&0x10;
+	c=read_code(idx)&0x10;
+	if (c)
+		increment+=test_bit(CARRY);
 	add_Acc(increment);
 	PC+=2;
 }
 void add_a_addr(unsigned short idx)
 {
 	unsigned char increment;
+	int c;
 
 	increment=read_data(read_code(idx+1));
-	increment+=read_code(idx)&0x10;
+	c=read_code(idx)&0x10;
+	if (c)
+		increment+=test_bit(CARRY);
 	add_Acc(increment);
 	PC+=2;
 }
 void add_a_at_rx(unsigned short idx)
 {
 	unsigned char increment;
+	int c;
 
 	increment=read_data(read_register(read_code(idx)&0x01));
-	increment+=read_code(idx)&0x10;
+	c=read_code(idx)&0x10;
+	if (c)
+		increment+=test_bit(CARRY);
 	add_Acc(increment);
 	PC++;
 }
@@ -566,9 +576,12 @@ void add_a_at_rx(unsigned short idx)
 void add_a_rx(unsigned short idx)
 {
 	unsigned char increment;
+	int c;
 
 	increment=read_register(read_code(idx)&0x07);
-	increment+=read_code(idx)&0x10;
+	c=read_code(idx)&0x10;
+	if (c)
+		increment+=test_bit(CARRY);
 	add_Acc(increment);
 	PC++;
 }

@@ -434,21 +434,6 @@ static void do_timers_stuff(void)
 		update_timer_1();
 }
 
-#if 0
-/*	TODO: interrupt requests	*/
-static inline void set_irqs(void)
-{
-	/*	INT0	*/
-	if((test_bit(IT0) && (port_fall[3]&0x04)) || test_bit(INT0))
-		set_bit(IE0);
-	/*	INT1	*/
-	if((test_bit(IT1) && (port_fall[3]&0x08)) || test_bit(INT1))
-		set_bit(IE1);
-
-}
-	/*	TODO: serial	*/
-
-#endif
 void push(unsigned char data)
 {
 	data_memory[SP]++;
@@ -665,7 +650,6 @@ int main(int argc, char *argv[])
 	init_instructions();
 	init_machine();
 	modules_init();
-	printf("module_dir == %s\n", getenv("module_dir"));
 
 	set_timer(SYNC_FREQ, alarm_handler);
 
