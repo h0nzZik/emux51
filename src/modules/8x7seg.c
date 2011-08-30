@@ -34,7 +34,7 @@ void off_handler(instance *self, void *data)
 			if (self->history[i])
 				self->history[i]=0;
 			else
-				seven_seg_set_segments(self->ssegs[7-i], 0);
+				seven_seg_set_segments(self->ssegs[i], 0);
 		}
 	}
 	time_queue_add(self, 100, M_QUEUE(off_handler), NULL);
@@ -59,7 +59,7 @@ void import_segments(instance *self)
 	lighting=~decode_arr[data&0x0F];
 	select=data>>4;
 	self->history[select]=1;
-	seven_seg_set_segments(self->ssegs[7-select], lighting);
+	seven_seg_set_segments(self->ssegs[select], lighting);
 	self->current=select;
 }
 
@@ -85,7 +85,7 @@ static void port_select(PortSelector *ps, instance *self)
 	import_segments(self);
 }
 
-void *module_init(instance *self)
+int module_init(instance *self)
 {
 	/*	init module	*/
 	int i;
