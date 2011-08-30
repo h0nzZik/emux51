@@ -174,17 +174,6 @@ void write_Acc(char data)
 {
 	data_memory[Acc]=data;
 }
-void add_Acc(unsigned char increment)
-{
-	unsigned char acc;
-	unsigned int sum;
-
-	acc=read_Acc();	
-	sum=acc+increment;
-	write_carry(sum>255);
-	write_Acc((unsigned char) sum);
-}
-
 void write_carry(int data)
 {
 	data&=1;
@@ -194,6 +183,44 @@ void write_carry(int data)
 		clr_bit(CARRY);
 
 }
+void write_acarry(int data)
+{
+	data&=1;
+	if (data)
+		set_bit(ACARRY);
+	else
+		clr_bit(ACARRY);	
+}
+
+void add_Acc(unsigned char increment)
+{
+	unsigned char acc;
+	int sum;
+	int nibble_sum;
+
+	acc=read_Acc();	
+	sum=acc+increment;
+	write_carry(sum>255);
+	nibble_sum=(acc&0x0F)+increment;
+	write_acarry(nibble_sum>15);
+	write_Acc((unsigned char) sum);
+}
+void sub_Acc(unsigned char decrement)
+{
+	unsigned char acc;
+	int sum;
+	int nibble_sum;
+
+	acc=read_Acc();
+	sum=acc-decrement;
+	write_carry(sum<0);
+	nibble_sum=(acc&0x0F)-decrement;
+	write_acarry(nibble_sum<0);
+//	printf("sub: 0x%x\n", sum);
+	write_Acc((unsigned char) sum);	
+}
+
+
 
 
 /*	So, bit adressable memory is inside (0x20, 0x2F) and (0x80, 0xF8).

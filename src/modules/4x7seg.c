@@ -97,7 +97,7 @@ static void port_select(PortSelector *ps, instance *self)
 	import_segments(self);
 }
 
-void *module_init(instance *self)
+int module_init(instance *self)
 {
 	/*	init module	*/
 	int i;

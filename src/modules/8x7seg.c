@@ -53,14 +53,15 @@ void import_segments(instance *self)
 	int select;
 
 	read_port(self, self->port_no, &data);
+
+	select=data>>4;
+	self->current=select;
 	/*	suppression	*/
 	if ((data>>7)&1)
 		return;
 	lighting=~decode_arr[data&0x0F];
-	select=data>>4;
 	self->history[select]=1;
 	seven_seg_set_segments(self->ssegs[select], lighting);
-	self->current=select;
 }
 
 void module_read(instance *self, int port)

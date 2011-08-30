@@ -35,8 +35,10 @@
 *	* ret, reti
 *	* add
 *	* inc
+*	* dec
 *	* anl
 *	* swap, xch, xchd
+* CHECK	* cjne
 *
 *	Implemented modules:
 *	* Leds

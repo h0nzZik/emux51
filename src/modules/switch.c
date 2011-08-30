@@ -36,8 +36,7 @@ static void toggled(GtkToggleButton *button, inst_t *self)
 	} else {
 		self->ext_state&=~(1<<bit);
 	}
-	if (write_port(self, self->port, self->ext_state))
-		printf("shit\n");
+	write_port(self, self->port, self->ext_state);
 }
 
 
@@ -49,7 +48,7 @@ static void port_select(PortSelector *ps, inst_t *self)
 	port=port_selector_get_port(ps);
 	printf("[switch:%d]\tport %d was selected\n", self->id, port);
 	if (alloc_bits(self, port, 0xFF)){
-		printf("can't allocate port %d\n", port);
+		printf("[switch:%d]\tcan't allocate port %d\n", self->id, port);
 		return;
 	}
 	/* reset port */
@@ -101,7 +100,7 @@ int module_init(inst_t *self)
 	/*	try to find empty port	*/
 	for(j=0; j<4; j++) {
 		if (alloc_bits(self, j, 0xFF) == 0){
-			printf("found at %d\n", j);
+			printf("[switch:%d]\tusing port %d\n", self->id, j);
 			self->port=j;
 			port_selector_set_port(PORT_SELECTOR(select), j);
 			break;

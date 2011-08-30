@@ -20,13 +20,14 @@ main:
 	acall	zobraz
 	sjmp	main
 
-zobraz:        push    PSW
-       mov     vys, @R0
-       inc     R0
-       cjne    R0, #video + 8, _sk	;	pouze 6 vyuzivanych segmentu
-       mov     R0, #video
-_sk:   pop     PSW
-       ret
+zobraz:
+	push    PSW
+	mov     vys, @R0
+	inc     R0
+	cjne    R0, #video + 8, _sk
+	mov     R0, #video
+_sk:	pop     PSW
+	ret
 
 bcd_to_video:
 

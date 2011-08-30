@@ -84,7 +84,7 @@ void mov_at_rx_a(unsigned short idx)
 
 	addr=read_register(read_code(idx)&0x01);
 	write_data(addr, read_Acc());
-	PC+=2;
+	PC++;
 }
 void mov_at_rx_addr(unsigned short idx)
 {
@@ -291,7 +291,7 @@ void djnz_rx_addr(unsigned short idx)
 	}
 
 }
-void jz(unsigned int idx)
+void jz(unsigned short idx)
 {
 	signed char inc;
 
@@ -301,7 +301,7 @@ void jz(unsigned int idx)
 		PC+=inc;
 	}
 }
-void jnz(unsigned int idx)
+void jnz(unsigned short idx)
 {
 	signed char inc;
 
@@ -311,7 +311,7 @@ void jnz(unsigned int idx)
 		PC+=inc;
 	}
 }
-void cjne_rx_imm8_addr(unsigned int idx)
+void cjne_rx_imm8_addr(unsigned short idx)
 {
 	signed char inc;
 	unsigned char data;
@@ -325,6 +325,55 @@ void cjne_rx_imm8_addr(unsigned int idx)
 		PC+=inc;
 	write_carry(rdata < data);
 }
+void cjne_at_rx_imm8_addr(unsigned short idx)
+{
+	signed char inc;
+	unsigned char data;
+	unsigned char rdata;
+
+	rdata=read_data(read_register(read_code(idx)&0x01));
+	data=read_code(idx+1);
+	inc=read_code(idx+2);
+	PC+=3;
+	if (rdata != data)
+		PC+=inc;
+	write_carry(rdata < data);
+}
+void cjne_a_imm8_addr(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char data;
+	signed char inc;
+
+	a=read_Acc();
+	data=read_code(idx+1);
+	inc=read_code(idx+2);
+
+	PC+=3;
+	if (a != data)
+		PC+=inc;
+	write_carry(a < data);
+}
+
+void cjne_a_addr_addr(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char data_addr;
+	unsigned char data;
+	signed char inc;
+
+
+	a=read_Acc();
+	data_addr=read_code(idx+1);
+	data=read_data(data_addr);
+	inc=read_code(idx+2);
+
+	PC+=3;
+	if (a != data)
+		PC+=inc;
+	write_carry(a < data);
+}
+
 /*		</byte conditional jumps>		*/
 
 
@@ -586,6 +635,42 @@ void add_a_rx(unsigned short idx)
 	PC++;
 }
 
+void subb_a_imm8(unsigned short idx)
+{
+	unsigned char decrement;
+
+	decrement=read_code(idx+1);
+	decrement+=test_bit(CARRY);
+	sub_Acc(decrement);
+	PC+=2;
+}
+void subb_a_addr(unsigned short idx)
+{
+	unsigned char decrement;
+
+	decrement=read_data(read_code(idx+1));
+	decrement+=test_bit(CARRY);
+	sub_Acc(decrement);
+	PC+=2;
+}
+void subb_a_rx(unsigned short idx)
+{
+	unsigned char decrement;
+
+	decrement=read_register(read_code(idx)&0x07);
+	decrement+=test_bit(CARRY);
+	sub_Acc(decrement);
+	PC++;
+}
+void subb_a_at_rx(unsigned short idx)
+{
+	unsigned char decrement;
+
+	decrement=read_data(read_register(read_code(idx)&0x01));
+	decrement+=test_bit(CARRY);
+	sub_Acc(decrement);
+	PC++;
+}
 void inc_rx(unsigned short idx)
 {
 	unsigned char reg;
@@ -597,7 +682,91 @@ void inc_rx(unsigned short idx)
 	write_register(reg, data);
 	PC++;
 }
+void inc_at_rx(unsigned short idx)
+{
+	unsigned char addr;
+	unsigned char data;
 
+	addr=read_register(read_code(idx)&0x01);
+	data=read_data(addr);
+	data++;
+	write_data(addr, data);
+	PC++;
+}
+void inc_a(unsigned short idx)
+{
+	unsigned char a;
+
+	a=read_Acc();
+	a++;
+	write_Acc(a);
+	PC++;
+}
+void inc_dptr(unsigned short idx)
+{
+	unsigned short dptr;
+
+	dptr=(read_data(DPH)<<8)|(read_data(DPL));
+	dptr++;
+	write_data(DPL, dptr&0x00FF);
+	write_data(DPH, dptr>>8);
+	PC++;
+}
+void inc_addr(unsigned short idx)
+{
+	unsigned char addr;
+	unsigned char data;
+
+	addr=read_code(idx+1);
+	data=read_data(addr);
+	data++;
+	write_data(addr, data);
+	PC+=2;
+}
+
+
+void dec_rx(unsigned short idx)
+{
+	unsigned char reg;
+	unsigned char data;
+
+	reg=read_code(idx)&0x07;
+	data=read_register(reg);
+	data--;
+	write_register(reg, data);
+	PC++;
+}
+void dec_at_rx(unsigned short idx)
+{
+	unsigned char addr;
+	unsigned char data;
+
+	addr=read_register(read_code(idx)&0x01);
+	data=read_data(addr);
+	data--;
+	write_data(addr, data);
+	PC++;
+}
+void dec_a(unsigned short idx)
+{
+	unsigned char a;
+
+	a=read_Acc();
+	a--;
+	write_Acc(a);
+	PC++;
+}
+void dec_addr(unsigned short idx)
+{
+	unsigned char addr;
+	unsigned char data;
+
+	addr=read_code(idx+1);
+	data=read_data(addr);
+	data--;
+	write_data(addr, data);
+	PC+=2;
+}
 void anl_a_addr(unsigned short idx)
 {
 	unsigned char data;
@@ -705,6 +874,19 @@ void swap_a(unsigned short idx)
 	unsigned char a;
 	a=read_Acc()>>4;
 	a|=read_Acc()<<4;
+	write_Acc(a);
+	PC++;
+}
+
+void rr_a(unsigned short idx)
+{
+	unsigned char a;
+	int flag;
+
+	a=read_Acc();
+	flag=a&1;
+	a>>=1;
+	a|=flag<<7;
 	write_Acc(a);
 	PC++;
 }
@@ -823,7 +1005,10 @@ void init_mov_instructions(void)
 	opcodes[0xF5].f=mov_addr_a;
 	opcodes[0xF5].time=1;
 
-
+	/*	mov addr, @rx	*/
+	opcodes[0x87].f=mov_addr_at_rx;
+	opcodes[0x87].time=2;
+	opcodes[0x86]=opcodes[0x87];
 
 }
 
@@ -877,12 +1062,26 @@ void init_jump_instructions(void)
 		opcodes[i].time=2;
 	}
 	/*	cjne	*/
+	opcodes[0xB4].f=cjne_a_imm8_addr;
+	opcodes[0xB4].time=2;
+	opcodes[0xB5].f=cjne_a_addr_addr;
+	opcodes[0xB5].time=2;
+	for (i=0xB6; i<=0xB7; i++) {
+		opcodes[i].f=cjne_at_rx_imm8_addr;
+		opcodes[i].time=2;
+	}
+
 	for (i=0xB8; i<=0xBF; i++) {
 		opcodes[i].f=cjne_rx_imm8_addr;
 		/*	CHECK:	*/
 		opcodes[i].time=2;
 	}
-
+	/*	jnz	*/
+	opcodes[0x70].f=jnz;
+	opcodes[0x70].time=1;
+	/*	jz	*/
+	opcodes[0x60].f=jz;
+	opcodes[0x60].time=1;
 }
 
 
@@ -984,6 +1183,18 @@ void init_aritm_instructions(void)
 		opcodes[i].f=add_a_rx;
 		opcodes[i].time=1;
 	}
+	/*	subb	*/
+	opcodes[0x94].f=subb_a_imm8;
+	opcodes[0x94].time=1;
+	opcodes[0x95].f=subb_a_addr;
+	opcodes[0x95].time=1;
+	opcodes[0x96].f=subb_a_at_rx;
+	opcodes[0x96].time=1;
+	opcodes[0x97]=opcodes[0x96];
+	for (i=0x98; i<=0x9F; i++) {
+		opcodes[i].f=subb_a_rx;
+		opcodes[i].time=1;
+	}
 
 	/*	anl	*/
 	opcodes[0x52].f=anl_addr_a;
@@ -1013,10 +1224,38 @@ void init_aritm_instructions(void)
 	opcodes[0xB0].f=anl_c_naddr;
 	opcodes[0xB0].time=2;
 
+	/*	inc a	*/
+	opcodes[0x04].f=inc_a;
+	opcodes[0x04].time=1;
+	/*	inc addr	*/
+	opcodes[0x05].f=inc_addr;
+	opcodes[0x05].time=1;
+	/*	inc @rx	*/
+	opcodes[0x06].f=inc_at_rx;
+	opcodes[0x06].time=1;
+	opcodes[0x07]=opcodes[0x06];
 	/*	inc rx	*/
 	for (i=0x08; i<=0x0F; i++) {
 		opcodes[i].f=inc_rx;
-		/*	CHECK	*/
+		opcodes[i].time=1;
+	}
+	/*	inc dptr	*/
+	opcodes[0xA3].f=inc_dptr;
+	opcodes[0xA3].time=1;
+
+	/*	dec a	*/
+	opcodes[0x14].f=dec_a;
+	opcodes[0x14].time=1;
+	/*	dec addr	*/
+	opcodes[0x15].f=dec_addr;
+	opcodes[0x15].time=1;
+	/*	dec @rx	*/
+	opcodes[0x16].f=dec_at_rx;
+	opcodes[0x16].time=1;
+	opcodes[0x17]=opcodes[0x16];
+	/*	dec rx	*/
+	for (i=0x18; i<=0x1F; i++) {
+		opcodes[i].f=dec_rx;
 		opcodes[i].time=1;
 	}
 }
@@ -1057,8 +1296,12 @@ void init_instructions(void)
 	/*	NOP	*/
 	opcodes[0x00].f=nop;
 	opcodes[0x00].time=1;
+	/*	da a	*/
 	opcodes[0xD4].f=da_a;
 	opcodes[0xD4].time=1;
+	/*	rr a	*/
+	opcodes[0x03].f=rr_a;
+	opcodes[0x03].time=1;
 
 	init_xchange();
 	init_ret_instructions();
