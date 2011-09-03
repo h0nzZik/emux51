@@ -8,7 +8,6 @@
 #define PORTS_CNT 4
 
 
-//#define MACHINE_FREQ_DEFAULT 1000000
 #define SYNC_FREQ	50 /* [HZ] */
 
 
@@ -103,13 +102,8 @@ extern unsigned char code_memory[CODE_LENGHT];
 extern unsigned char data_memory[DATA_LENGHT];
 extern unsigned short PC;
 
-/*extern unsigned char *SP;*/
+unsigned long Fosc;
 
-#if 0
-/*	port operations			*/
-unsigned char read_port (int port);
-void write_port(int port, char data);
-#endif
 
 /*	data memory operations		*/
 unsigned char read_data (unsigned addr);
@@ -127,6 +121,7 @@ inline void write_code(unsigned addr, char data);
 unsigned char read_Acc(void);
 void write_Acc(char data);
 void add_Acc(unsigned char increment);
+void sub_Acc(unsigned char decrement);
 
 
 /*	operations with bit adress	*/
@@ -160,7 +155,6 @@ extern unsigned char data_memory[];
 extern unsigned char port_latches[PORTS_CNT];
 extern unsigned char port_collectors[PORTS_CNT];
 extern unsigned char port_externals[PORTS_CNT];
-//extern unsigned char port_fall[PORTS_CNT];
 
 void update_port(int port);
 
@@ -169,5 +163,6 @@ void alarm_handler(void);
 
 void stop(void);
 void start(void);
+void pause(void);
 
 #endif
