@@ -620,12 +620,10 @@ void alarm_handler(void)
 	static int last=0;
 	int cnt;
 
-
-	time_queue_perform();
-
-
 	if (g_atomic_int_get(&running) == 0)
 		return;
+
+	time_queue_perform();
 
 	gui_callback();
 	cnt=remaining_machine_cycles/remaining_sync_cycles;

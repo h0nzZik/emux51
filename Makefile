@@ -67,7 +67,7 @@ ${widgets}:
 	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
 
 
-modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod
+modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod keyboard.mod
 
 modules: ${modules}
 ${modules}:
@@ -78,7 +78,7 @@ ${modules}:
 	@ ${CC} -shared -L${OUTDIR} -lwidgets -o ${OUTDIR}/modules/${@:.mod=${DEX}} ${OBJ}/modules/${@:.mod=.o}\
 		`${PKG-CONFIG} --libs gtk+-2.0`
 log:
-	cat ${LOG}
+	@cat ${LOG}
 lines:
 	@ cat src/emux51/*.c src/modules/*.c src/widgets/*.c include/*.h Makefile | wc -l
 clean:

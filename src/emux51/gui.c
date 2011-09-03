@@ -189,7 +189,6 @@ static void reload(void *data)
 		loaded=0;
 		*hexfile='\0';
 	}
-	
 }
 
 
@@ -306,6 +305,7 @@ static void set_frequency(unsigned long freq)
 	start();
 }
 
+/*	create set frequency dialog	*/
 static void change_frequency(GtkWidget *button, void *data)
 {
 
