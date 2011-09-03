@@ -6,10 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <ctype.h>
 
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
+
+#include <locale.h>
 
 #include <module.h>
 #include <settings.h>
@@ -255,6 +258,96 @@ static void gui_mod_ld(void *data)
 	gtk_widget_destroy(dialog);
 }
 
+char *format_frequency(char *buff, unsigned long freq)
+{
+	if (freq < 2*1000) {
+		sprintf(buff, "%ld Hz", freq);
+	} else if (freq < 2*1000*1000) {
+		if (freq%1000 == 0)
+			sprintf(buff, "%ld KHz", freq/1000);			
+		else
+			sprintf(buff, "%.3f KHz", (float)freq/1000);
+	} else {
+		if (freq%1000000 == 0)
+			sprintf(buff, "%ld MHz", freq/1000000);			
+		else
+			sprintf(buff, "%.6f MHz", (float)freq/1000000);
+	}
+	return buff;
+}
+
+unsigned long parse_frequency(const char *str)
+{
+	float freq=0;
+
+	if (sscanf(str, "%f", &freq) != 1)
+		return 0;
+	while (*str) {
+		if (isalpha(*str)) {
+			if(!strcmp(str, "kHz") || !strcmp(str, "KHz"))
+				return (1000*freq);
+			if(!strcmp(str, "MHz"))
+				return (1000*1000*freq);
+			return (unsigned long)freq;
+		}
+		str++;
+	}
+	return (unsigned long)freq;
+	
+}
+
+static void set_frequency(unsigned long freq)
+{
+	char buff[40];
+	pause();
+	Fosc=freq;
+	format_frequency(buff, Fosc);
+	gtk_label_set_text(GTK_LABEL(freq_label), buff);
+	start();
+}
+
+static void change_frequency(GtkWidget *button, void *data)
+{
+
+	GtkWidget *dialog;
+	GtkWidget *entry;
+	GtkWidget *hbox;
+	GtkWidget *label;
+	int response;
+	char buff[40];
+	const char *freq;
+	unsigned long f;
+
+	dialog=gtk_dialog_new_with_buttons("Set frequency",
+					GTK_WINDOW(window),
+					GTK_DIALOG_DESTROY_WITH_PARENT,
+					GTK_STOCK_OK,
+					GTK_RESPONSE_OK,
+					GTK_STOCK_CANCEL,
+					GTK_RESPONSE_CANCEL,
+					NULL);
+	hbox=gtk_hbox_new(FALSE, 2);
+	gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox), hbox, FALSE, FALSE, 0);
+	label=gtk_label_new("Fosc:");
+	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+	entry=gtk_entry_new();
+	format_frequency(buff, Fosc);
+	gtk_entry_set_text(GTK_ENTRY(entry), buff);
+	gtk_box_pack_start(GTK_BOX(hbox), entry, FALSE, FALSE, 0);
+	gtk_widget_show_all(hbox);
+	response=gtk_dialog_run(GTK_DIALOG(dialog));
+	if (response == GTK_RESPONSE_OK){
+		freq=gtk_entry_get_text(GTK_ENTRY(entry));
+		f=parse_frequency(freq);
+		if (f) {
+			set_frequency(f);
+		}
+	}
+	gtk_widget_destroy(dialog);
+
+}
+
+
 static void dump_view(gpointer data, guint action, GtkWidget *button)
 {
 	int active;
@@ -293,6 +386,11 @@ int nitems=sizeof(items)/sizeof(items[0]);
 int gui_run(int *argc, char **argv[])
 {
 	gtk_init(argc, argv);
+
+
+	setlocale(LC_ALL, "");
+	setlocale(LC_NUMERIC, "POSIX");
+
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), " Welcome to Emux51");
 	g_signal_connect(window, "delete_event",
@@ -346,8 +444,10 @@ int gui_run(int *argc, char **argv[])
 	run_vbox=gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(run_frame), run_vbox);
 
-	freq_label=gtk_label_new("12.0 MHz");
+	freq_label=gtk_label_new("");
+	set_frequency(12000000);
 	gtk_box_pack_start(GTK_BOX(run_vbox), freq_label, TRUE, TRUE, 0);
+
 
 	run_hbox=gtk_hbox_new(TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(run_vbox), run_hbox, FALSE, FALSE, 0);
@@ -358,6 +458,7 @@ int gui_run(int *argc, char **argv[])
 
 	freq_button=gtk_button_new_with_label("Frequency");
 	gtk_box_pack_start(GTK_BOX(run_hbox), freq_button, TRUE, TRUE, 0);
+	g_signal_connect(freq_button, "clicked", G_CALLBACK(change_frequency), NULL);
 	
 
 	/*	module load	*/
