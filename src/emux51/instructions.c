@@ -289,8 +289,24 @@ void djnz_rx_addr(unsigned short idx)
 	if (rdata) {
 		PC+=addr;
 	}
-
 }
+void djnz_addr_addr(unsigned short idx)
+{
+	unsigned char addr;
+	signed char reladdr;
+	unsigned char data;
+
+	addr=read_code(idx+1);
+	data=read_data(addr);
+	reladdr=read_code(idx+2);
+	data--;
+	write_data(addr, data);
+	PC+=3;
+	if (data)
+		PC+=reladdr;
+	
+}
+
 void jz(unsigned short idx)
 {
 	signed char inc;
@@ -521,7 +537,12 @@ void sjmp(unsigned short idx)
 	PC+=(signed char)code_memory[idx+1];
 }
 
-
+void jmp_a_dptr(unsigned short idx)
+{
+	unsigned short dest;
+	dest=(read_data(DPH)<<8|read_data(DPL))+read_Acc();
+	PC=dest;
+}
 
 
 void acall(unsigned short idx)
@@ -857,6 +878,208 @@ void anl_c_naddr(unsigned short idx)
 	PC+=2;
 
 }
+
+void orl_addr_a(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char addr;
+	unsigned char data;
+
+	a=read_Acc();
+	addr=read_code(idx+1);
+	data=read_data(addr);
+	data|=a;
+	write_data(addr, data);
+	PC+=2;
+}
+void orl_addr_imm8(unsigned short idx)
+{
+	unsigned char addr;
+	unsigned char data;
+
+	addr=read_code(idx+1);
+	data=read_code(idx+2);
+	data|=read_data(addr);
+	write_data(addr, data);
+	PC+=3;
+}
+void orl_a_imm8(unsigned short idx)
+{
+	unsigned char data;
+	unsigned char a;
+
+	a=read_Acc();
+	data=read_code(idx+1);
+	data|=a;
+	write_Acc(a);
+	PC+=2;
+}
+void orl_a_addr(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char addr;
+	unsigned char data;
+
+	a=read_Acc();
+	addr=read_code(idx+1);
+	data=read_data(addr);
+	a|=data;
+	write_Acc(a);
+	PC+=2;
+}
+void orl_a_at_rx(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char data;
+
+	a=read_Acc();
+	data=read_data(read_register(read_code(idx)&0x01));
+	a|=data;
+	write_Acc(a);
+	PC++;
+}
+void orl_a_rx(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char data;
+
+	a=read_Acc();
+	data=read_register(read_code(idx)&0x07);
+	a|=data;
+	write_Acc(a);
+	PC++;
+}
+void orl_c_addr(unsigned short idx)
+{
+	int c;
+	unsigned char addr;
+
+	c=test_bit(CARRY);
+	addr=read_code(idx+1);
+	c|=test_bit(addr);
+	write_carry(c);
+	PC+=2;
+}
+void orl_c_naddr(unsigned short idx)
+{
+	int c;
+	unsigned char addr;
+
+	c=test_bit(CARRY);
+	addr=read_code(idx+1);
+	c|=!test_bit(addr);
+	write_carry(c);
+	PC+=2;
+}
+
+/*	X0R	*/
+void xrl_addr_a(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char addr;
+	unsigned char data;
+
+	a=read_Acc();
+	addr=read_code(idx+1);
+	data=read_data(addr);
+	data^=a;
+	write_data(addr, data);
+	PC+=2;
+}
+void xrl_addr_imm8(unsigned short idx)
+{
+	unsigned char addr;
+	unsigned char data;
+
+	addr=read_code(idx+1);
+	data=read_code(idx+2);
+	data^=read_data(addr);
+	write_data(addr, data);
+	PC+=3;
+}
+void xrl_a_imm8(unsigned short idx)
+{
+	unsigned char data;
+	unsigned char a;
+
+	a=read_Acc();
+	data=read_code(idx+1);
+	data^=a;
+	write_Acc(a);
+	PC+=2;
+}
+void xrl_a_addr(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char addr;
+	unsigned char data;
+
+	a=read_Acc();
+	addr=read_code(idx+1);
+	data=read_data(addr);
+	a^=data;
+	write_Acc(a);
+	PC+=2;
+}
+void xrl_a_at_rx(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char data;
+
+	a=read_Acc();
+	data=read_data(read_register(read_code(idx)&0x01));
+	a^=data;
+	write_Acc(a);
+	PC++;
+}
+void xrl_a_rx(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char data;
+
+	a=read_Acc();
+	data=read_register(read_code(idx)&0x07);
+	a^=data;
+	write_Acc(a);
+	PC++;
+}
+void div_ab(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char b;
+	unsigned char rem;
+	unsigned char quot;
+
+	a=read_Acc();
+	b=read_data(B_reg);
+	quot=a/b;
+	rem=a%b;
+
+	write_Acc(quot);
+	write_data(B_reg, rem);
+	clr_bit(CARRY);
+	clr_bit(OVFLOW);
+	PC++;
+}
+void mul_ab(unsigned short idx)
+{
+	unsigned char a;
+	unsigned char b;
+	unsigned short product;
+
+	a=read_Acc();
+	b=read_data(B_reg);
+	product=a*b;
+	write_Acc(product&0xFF);
+	write_data(B_reg, product>>8);
+	clr_bit(CARRY);
+	if (product > 0xFF)
+		set_bit(OVFLOW);
+	else
+		clr_bit(OVFLOW);
+	PC++;
+}
+
 void da_a(unsigned short idx)
 {
 	unsigned int a;
@@ -890,7 +1113,44 @@ void rr_a(unsigned short idx)
 	write_Acc(a);
 	PC++;
 }
+void rrc_a(unsigned short idx)
+{
+	unsigned char a;
+	int flag;
 
+	a=read_Acc();
+	flag=a&1;
+	a>>=1;
+	a|=test_bit(CARRY)<<7;
+	write_Acc(a);
+	write_carry(flag);
+	PC++;
+}
+void rl_a(unsigned short idx)
+{
+	unsigned char a;
+	int flag;
+
+	a=read_Acc();
+	flag=a&0x80?1:0;
+	a<<=1;
+	a|=flag;
+	write_Acc(a);
+	PC++;
+}
+void rlc_a(unsigned short idx)
+{
+	unsigned char a;
+	int flag;
+
+	a=read_Acc();
+	flag=a&0x80?1:0;
+	a<<=1;
+	a|=test_bit(CARRY);
+	write_Acc(a);
+	write_carry(flag);
+	PC++;
+}
 void nop(unsigned short idx)
 {
 	PC++;
@@ -1057,6 +1317,9 @@ void init_jump_instructions(void)
 	opcodes[0x02].time=2;
 
 	/*	djnz	*/
+	opcodes[0xD5].f=djnz_addr_addr;
+	opcodes[0xD5].time=2;
+
 	for (i=0xD8; i<=0xDF; i++) {
 		opcodes[i].f=djnz_rx_addr;
 		opcodes[i].time=2;
@@ -1082,6 +1345,10 @@ void init_jump_instructions(void)
 	/*	jz	*/
 	opcodes[0x60].f=jz;
 	opcodes[0x60].time=1;
+
+	/*	jmp @a+dptr	*/
+	opcodes[0x73].f=jmp_a_dptr;
+	opcodes[0x73].time=2;
 }
 
 
@@ -1127,13 +1394,19 @@ void init_bit_cond_jumps(void)
 {
 	/*	jbc	*/
 	opcodes[0x10].f=jbc;
-	opcodes[0x10].time=1;
+	opcodes[0x10].time=2;
 	/*	jb	*/
 	opcodes[0x20].f=jb;
-	opcodes[0x20].time=1;
+	opcodes[0x20].time=2;
 	/*	jnb	*/
 	opcodes[0x30].f=jnb;
-	opcodes[0x30].time=1;
+	opcodes[0x30].time=2;
+	/*	jc	*/
+	opcodes[0x40].f=jc;
+	opcodes[0x40].time=2;
+	/*	jnc	*/
+	opcodes[0x50].f=jnc;
+	opcodes[0x50].time=2;
 
 
 }
@@ -1218,11 +1491,63 @@ void init_aritm_instructions(void)
 		opcodes[i].time=1;
 	}
 
-	opcodes[0x81].f=anl_c_addr;
-	opcodes[0x81].time=2;
+	opcodes[0x82].f=anl_c_addr;
+	opcodes[0x82].time=2;
 
 	opcodes[0xB0].f=anl_c_naddr;
 	opcodes[0xB0].time=2;
+
+
+	/*	orl	*/
+	opcodes[0x42].f=orl_addr_a;
+	opcodes[0x42].time=1;
+
+	opcodes[0x43].f=orl_addr_imm8;
+	opcodes[0x43].time=2;
+
+	opcodes[0x44].f=orl_a_imm8;
+	opcodes[0x44].time=1;
+
+	opcodes[0x45].f=orl_a_addr;
+	opcodes[0x45].time=1;
+
+	opcodes[0x46].f=orl_a_at_rx;
+	opcodes[0x46].time=1;
+	opcodes[0x47]=opcodes[0x46];
+
+	for(i=0x48; i<0x50; i++) {
+		opcodes[i].f=orl_a_rx;
+		opcodes[i].time=1;
+	}
+
+	opcodes[0x72].f=orl_c_addr;
+	opcodes[0x72].time=2;
+
+	opcodes[0xA0].f=orl_c_naddr;
+	opcodes[0xA0].time=2;
+
+	/*	xrl	*/
+	opcodes[0x62].f=xrl_addr_a;
+	opcodes[0x62].time=1;
+
+	opcodes[0x63].f=xrl_addr_imm8;
+	opcodes[0x63].time=2;
+
+	opcodes[0x64].f=xrl_a_imm8;
+	opcodes[0x64].time=1;
+
+	opcodes[0x65].f=xrl_a_addr;
+	opcodes[0x45].time=1;
+
+	opcodes[0x66].f=xrl_a_at_rx;
+	opcodes[0x66].time=1;
+	opcodes[0x67]=opcodes[0x46];
+
+	for(i=0x68; i<0x70; i++) {
+		opcodes[i].f=xrl_a_rx;
+		opcodes[i].time=1;
+	}
+
 
 	/*	inc a	*/
 	opcodes[0x04].f=inc_a;
@@ -1258,6 +1583,15 @@ void init_aritm_instructions(void)
 		opcodes[i].f=dec_rx;
 		opcodes[i].time=1;
 	}
+
+	/*	mul	*/
+	opcodes[0xA4].f=mul_ab;
+	opcodes[0xA4].time=4;
+	/*	div	*/
+	opcodes[0x84].f=div_ab;
+	opcodes[0x84].time=4;
+
+
 }
 
 void init_xchange(void)
@@ -1283,7 +1617,22 @@ void init_xchange(void)
 	opcodes[0xC4].f=swap_a;
 	opcodes[0xC4].time=1;
 }
+void init_rotary(void)
+{
+	/*	rr a	*/
+	opcodes[0x03].f=rr_a;
+	opcodes[0x03].time=1;
+	/*	rrc a	*/
+	opcodes[0x13].f=rrc_a;
+	opcodes[0x13].time=1;
+	/*	rl a	*/
+	opcodes[0x23].f=rl_a;
+	opcodes[0x23].time=1;
+	/*	rlc a	*/
+	opcodes[0x33].f=rlc_a;
+	opcodes[0x33].time=1;
 
+}
 
 void init_instructions(void)
 {
@@ -1299,9 +1648,6 @@ void init_instructions(void)
 	/*	da a	*/
 	opcodes[0xD4].f=da_a;
 	opcodes[0xD4].time=1;
-	/*	rr a	*/
-	opcodes[0x03].f=rr_a;
-	opcodes[0x03].time=1;
 
 	init_xchange();
 	init_ret_instructions();
@@ -1314,5 +1660,6 @@ void init_instructions(void)
 	init_cpl();
 	init_bit_cond_jumps();
 	init_aritm_instructions();
+	init_rotary();
 }
 

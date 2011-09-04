@@ -21,6 +21,7 @@
 #define TH1	0x8D
 #define PSW	0xD0
 #define Acc	0xE0
+#define B_reg	0xF0
 #define DPH	0x83
 #define DPL	0x82
 
@@ -31,6 +32,7 @@
 /*	general bit adreseses	*/
 #define CARRY	0xD7
 #define ACARRY	0xD6
+#define OVFLOW	0xD2
 
 /*	port bit adresses	*/
 #define P0(x) (0x80 + x)
