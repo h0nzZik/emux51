@@ -298,11 +298,15 @@ unsigned long parse_frequency(const char *str)
 static void set_frequency(unsigned long freq)
 {
 	char buff[40];
-	pause();
+	int state;
+	state=g_atomic_int_get(&running);
+	if (state)
+		pause();
 	Fosc=freq;
 	format_frequency(buff, Fosc);
 	gtk_label_set_text(GTK_LABEL(freq_label), buff);
-	start();
+	if (state)
+		start();
 }
 
 /*	create set frequency dialog	*/
