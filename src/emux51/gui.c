@@ -391,10 +391,10 @@ int gui_run(int *argc, char **argv[])
 {
 	gtk_init(argc, argv);
 
-
+/*
 	setlocale(LC_ALL, "");
 	setlocale(LC_NUMERIC, "POSIX");
-
+*/
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), " Welcome to Emux51");
 	g_signal_connect(window, "delete_event",

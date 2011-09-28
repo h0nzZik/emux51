@@ -5,25 +5,28 @@ INCLUDE=-I include
 ifeq (${arch}, windows)
 	PKG-CONFIG=mingw32-pkg-config
 	CC=i686-pc-mingw32-gcc
-
-	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm -mwindows 
 	OUTDIR=out/windows
-	OUT=out/windows/emux51.exe
+
+
+ifeq (${debug},1)
+	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm 
+	OUT=${OUTDIR}/emux51-con.exe
+else
+	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm -mwindows
+	OUT=${OUTDIR}/emux51.exe
+endif
 	DEX=.dll
 	HOME_VAR=USERPROFILE
-#	BUILD=-export-all-symbols
 
 else
 	PKG-CONFIG=pkg-config
 	arch=nixies
-
 	LDFLAGS=`${PKG-CONFIG} --libs gtk+-2.0 gthread-2.0`
 	OUT=out/nixies/emux51
 	OUTDIR=out/nixies
 	PIC=-fPIC
 	DEX=.so
 	HOME_VAR=HOME
-#	BUILD=-rdynamic
 endif
 
 DEFINES=-DMODULE_EXTENSION=\"${DEX}\" -DHOME_VAR=\"${HOME_VAR}\"
@@ -67,7 +70,7 @@ ${widgets}:
 	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
 
 
-modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod keyboard.mod
+modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod #keyboard.mod
 
 modules: ${modules}
 ${modules}:
@@ -75,8 +78,8 @@ ${modules}:
 	@ ${CC} -DBUILDING_MODULE ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/modules/${@:.mod=.o}\
 		src/modules/${@:.mod=.c}
 	@ echo linking ${OBJ}/modules/${@:.mod=.o}
-	@ ${CC} -shared -L${OUTDIR} -lwidgets -o ${OUTDIR}/modules/${@:.mod=${DEX}} ${OBJ}/modules/${@:.mod=.o}\
-		`${PKG-CONFIG} --libs gtk+-2.0`
+	@ ${CC} -shared -L${OUTDIR} -lwidgets -o ${OUTDIR}/modules/${@:.mod=${DEX}}\
+		${OBJ}/modules/${@:.mod=.o} `${PKG-CONFIG} --libs gtk+-2.0`
 log:
 	@cat ${LOG}
 lines:

@@ -2,6 +2,7 @@
  * hex.c - support for Intel HEX format. Most features are nor implemented yet.
  */
 #include <stdio.h>
+#include <glib.h>
 #include <hex.h>
 
 int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)
@@ -22,7 +23,7 @@ int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)
 	if (!(file && dest))
 		return -1;
 	printf("[emux]\tfile == %s\n", file);
-	fr=fopen(file, "rt");
+	fr=g_fopen(file, "rt");
 	if (fr == NULL){
 		perror("[emux]\tfopen");
 		return -2;
@@ -31,11 +32,13 @@ int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)
 	while (1 == fscanf(fr, "%s", buff)){
 		if (buff[0] != ':') {
 			fprintf(stderr, "[emux]\tbad format\n");
+			fclose(fr);
 			return -3;
 		}
 		ok=sscanf(buff, ":%2x%4x%2x", &size, &offset, &type);
 		if (ok != 3) {
 			fprintf(stderr, "[emux]\tbad format\n");
+			fclose(fr);
 			return -4;
 		}
 		switch(type){
@@ -43,6 +46,7 @@ int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)
 			sum=0;
 			if (16*segment+offset+size >= dest_len){
 				fprintf(stderr, "[emux]\tout of bounds\n");
+			fclose(fr);
 				return -1;
 			}
 			for (i=0; i<size; i++) {
@@ -54,8 +58,10 @@ int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)
 			}
 			break;
 			case 1:
+			fclose(fr);
 				return 0;
 			default:
+			fclose(fr);
 				return 3;
 		}
 	}

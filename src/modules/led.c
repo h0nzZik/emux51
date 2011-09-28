@@ -134,11 +134,7 @@ int module_init(my_t *self)
 	gtk_box_pack_start(GTK_BOX(box), select, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(box), self->da, TRUE, TRUE, 0);
 
-/*
-	if (in->f->handle_event(in->id, "read", module_read)){
-		in->f->crash(in->id, "handling");
-	}
-*/
+
 	/*	collor selection	*/
 	memset(&self->empty_c, 0xFF, sizeof(GdkColor));
 	memset(&self->filler_c, 0x00, sizeof(GdkColor));
@@ -156,9 +152,7 @@ int module_init(my_t *self)
 	gtk_widget_show_all(box);
 
 	self->window=gui_add(box, self, "LED panel");
-//	in->f->set_space(in->id, in);
-//	in->f->set_name(in->id, "LED panel");
-//	return box;
+
 	return 0;
 }
 

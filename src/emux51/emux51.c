@@ -124,7 +124,6 @@ void write_data(unsigned addr, char data)
 
 
 	if(isport(addr)){
-//		printf("program write to latch: 0x%x\n", data);
 		port=addr_to_port(addr);
 		port_latches[port]=data;
 		update_port(port);
@@ -223,9 +222,9 @@ void sub_Acc(unsigned char decrement)
 
 
 
-/*	So, bit adressable memory is inside (0x20, 0x2F) and (0x80, 0xF8).
- *	Between 0x20 and 0x2F is adressable each bit.
- *	Between 0x80 and 0xF8 are adressable bits in bytes 0x80, 0x88, 0x90 etc.
+/*	So, bit addressable memory is inside (0x20, 0x2F) and (0x80, 0xF8).
+ *	Between 0x20 and 0x2F is addressable each bit.
+ *	Between 0x80 and 0xF8 are addressable bits in bytes 0x80, 0x88, 0x90 etc.
  *	I wanna be rev3rse engineer ;)
  */
 
@@ -483,9 +482,11 @@ void jump_to(unsigned char addr)
 #define EX0_REQUEST (test_bit(EX0) && ((test_bit(IT0) && test_bit(IE0))\
 			||(!test_bit(IT0) && !test_bit(INT0))))
 
-#define EX1_REQUEST (test_bit(EX1)&&((test_bit(IT1)&& test_bit(IE1))||!test_bit(INT1)))
-#define ET0_REQUEST (test_bit(ET0)&&test_bit(TF0))
-#define ET1_REQUEST (test_bit(ET1)&&test_bit(TF1))
+#define EX1_REQUEST (test_bit(EX1) && ((test_bit(IT1) && test_bit(IE1))\
+			||(!test_bit(IT1) && !test_bit(INT1))))
+
+#define ET0_REQUEST (test_bit(ET0) && test_bit(TF0))
+#define ET1_REQUEST (test_bit(ET1) && test_bit(TF1))
 
 #define HAVE_REQUEST (EX0_REQUEST || EX1_REQUEST || ET0_REQUEST || ET1_REQUEST)
 
