@@ -49,7 +49,7 @@ widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o
 
 build:	${targets} gui alarm
 	@ echo linking..
-	@ ${CC} ${BUILD} -L${OUTDIR} -lwidgets ${objects} ${LDFLAGS}  -o ${OUT}	\
+	@ ${CC} ${BUILD} -L${OUTDIR} -lemux_widgets ${objects} ${LDFLAGS}  -o ${OUT}	\
 	  >> ${LOG}
 
 build_all: widgets build modules
@@ -63,7 +63,7 @@ mods:
 
 widgets: ${widgets}
 	@ echo linking widgets..
-	@ ${CC} -shared -o ${OUTDIR}/libwidgets${DEX} ${widgeto} `${PKG-CONFIG} --libs gtk+-2.0`
+	@ ${CC} -shared -o ${OUTDIR}/libemux_widgets${DEX} ${widgeto} `${PKG-CONFIG} --libs gtk+-2.0`
 
 ${widgets}:
 	@ echo ${CC} src/widgets/$@.c
@@ -78,7 +78,7 @@ ${modules}:
 	@ ${CC} -DBUILDING_MODULE ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/modules/${@:.mod=.o}\
 		src/modules/${@:.mod=.c}
 	@ echo linking ${OBJ}/modules/${@:.mod=.o}
-	@ ${CC} -shared -L${OUTDIR} -lwidgets -o ${OUTDIR}/modules/${@:.mod=${DEX}}\
+	@ ${CC} -shared -L${OUTDIR} -lemux_widgets -o ${OUTDIR}/modules/${@:.mod=${DEX}}\
 		${OBJ}/modules/${@:.mod=.o} `${PKG-CONFIG} --libs gtk+-2.0`
 log:
 	@cat ${LOG}
@@ -89,6 +89,6 @@ clean:
 	rm -f ${OBJ}/modules/*.o
 	rm -f ${LOG}
 	rm -f ${OUT}
-#	rm -f ${OUTDIR}/libwidgets${DEX}
+	rm -f ${OUTDIR}/libemux_widgets${DEX}
 #	rm -f ${OUTDIR}/modules/*${DEX}
 
