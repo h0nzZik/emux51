@@ -23,7 +23,7 @@ int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)
 	if (!(file && dest))
 		return -1;
 	printf("[emux]\tfile == %s\n", file);
-	fr=g_fopen(file, "rt");
+	fr=fopen(file, "rt");
 	if (fr == NULL){
 		perror("[emux]\tfopen");
 		return -2;

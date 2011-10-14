@@ -21,36 +21,13 @@
 #include <hex.h>
 
 GtkWidget *window;
-GtkWidget *mbox;
-
-GtkWidget *file_frame;
-GtkWidget *file_vbox;
-GtkWidget *file_hbox;
 GtkWidget *file_label;
-GtkWidget *file_tooltip;
-GtkWidget *file_button;
-GtkWidget *file_reload;
-
-
-GtkWidget *run_frame;
-GtkWidget *run_vbox;
-GtkWidget *freq_label;
-GtkWidget *run_hbox;
-GtkWidget *run_button;
-GtkWidget *freq_button;
-
-GtkWidget *dump_window;
-GtkWidget *dump_vbox;
 GtkWidget *dump_body;
-
-GtkWidget *mod_load_button;
-
-/*	menu stuff	*/
-GtkItemFactory *itf;
-GtkWidget *itf_widget;
-GtkAccelGroup *accel_group;
-/*	this will be set after first emiting 'delete_event' to dump_window	*/
+GtkWidget *freq_label;
+GtkWidget *dump_window;
+GtkWidget *run_button;
 GtkWidget *view_dump_menu_button=NULL;
+
 
 
 /*	16 lines * 80 bytes per line	*/
@@ -389,6 +366,23 @@ int nitems=sizeof(items)/sizeof(items[0]);
 
 int gui_run(int *argc, char **argv[])
 {
+	GtkWidget *mbox;
+	GtkWidget *file_frame;
+	GtkWidget *file_vbox;
+	GtkWidget *file_hbox;
+	GtkWidget *file_button;
+	GtkWidget *file_reload;
+	GtkWidget *run_frame;
+	GtkWidget *run_vbox;
+	GtkWidget *run_hbox;
+	GtkWidget *freq_button;
+	GtkWidget *mod_load_button;
+	GtkWidget *dump_vbox;
+	GtkWidget *itf_widget;
+	GtkItemFactory *itf;
+	GtkAccelGroup *accel_group;
+
+
 	gtk_init(argc, argv);
 
 /*
@@ -522,8 +516,6 @@ static gboolean
 gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * data)
 {
 	module_destroy(data, "delete-event");
-
-//	return FALSE;
 	return TRUE;
 }
 

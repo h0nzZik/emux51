@@ -5,8 +5,9 @@ INCLUDE=-I include
 ifeq (${arch}, windows)
 	PKG-CONFIG=mingw32-pkg-config
 	CC=i686-pc-mingw32-gcc
+ifndef (${OUTDIR})
 	OUTDIR=out/windows
-
+endif
 
 ifeq (${debug},1)
 	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm 
@@ -22,8 +23,10 @@ else
 	PKG-CONFIG=pkg-config
 	arch=nixies
 	LDFLAGS=`${PKG-CONFIG} --libs gtk+-2.0 gthread-2.0`
-	OUT=out/nixies/emux51
+ifndef (${OUTDIR})
 	OUTDIR=out/nixies
+endif
+	OUT=${OUTDIR}/emux51
 	PIC=-fPIC
 	DEX=.so
 	HOME_VAR=HOME
@@ -31,8 +34,13 @@ endif
 
 DEFINES=-DMODULE_EXTENSION=\"${DEX}\" -DHOME_VAR=\"${HOME_VAR}\"
 
-OBJ=.obj/${arch}
-LOG=out/${arch}/log.txt
+ifndef (${OBJ})
+	OBJ=.obj/${arch}
+endif
+ifndef (${LOG})
+	LOG=out/${arch}/log.txt
+endif
+
 archtarget=${arch}
 
 targets=instructions emux51 module hex settings ${archtarget} gui alarm
@@ -48,21 +56,21 @@ widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o
 .PHONY: build
 
 build:	${targets} gui alarm
-	@ echo linking..
+	@ echo 'linking..'
 	@ ${CC} ${BUILD} -L${OUTDIR} -lemux_widgets ${objects} ${LDFLAGS}  -o ${OUT}	\
 	  >> ${LOG}
 
 build_all: widgets build modules
 
 ${targets}:
-	@ echo ${CC} src/$@.c
+	@ echo '${CC} src/$@.c'
 	@ ${CC} ${INCLUDE} ${CFLAGS} ${DEFINES} -o ${OBJ}/$@.o src/emux51/$@.c 2>>${LOG}
 
 mods:
 	@ make --makefile=modules/Makefile ARCH=${ARCH}
 
 widgets: ${widgets}
-	@ echo linking widgets..
+	@ echo 'linking widgets..'
 	@ ${CC} -shared -o ${OUTDIR}/libemux_widgets${DEX} ${widgeto} `${PKG-CONFIG} --libs gtk+-2.0`
 
 ${widgets}:
@@ -70,18 +78,18 @@ ${widgets}:
 	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
 
 
-modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod #keyboard.mod
+modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod keyboard.mod
 
 modules: ${modules}
 ${modules}:
-	@ echo ${CC} src/modules/${@:.mod=.c}
+	@ echo '${CC} src/modules/${@:.mod=.c}'
 	@ ${CC} -DBUILDING_MODULE ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/modules/${@:.mod=.o}\
 		src/modules/${@:.mod=.c}
-	@ echo linking ${OBJ}/modules/${@:.mod=.o}
+	@ echo 'linking ${OBJ}/modules/${@:.mod=.o}'
 	@ ${CC} -shared -L${OUTDIR} -lemux_widgets -o ${OUTDIR}/modules/${@:.mod=${DEX}}\
 		${OBJ}/modules/${@:.mod=.o} `${PKG-CONFIG} --libs gtk+-2.0`
 log:
-	@cat ${LOG}
+	@ cat ${LOG}
 lines:
 	@ cat src/emux51/*.c src/modules/*.c src/widgets/*.c include/*.h Makefile | wc -l
 clean:
@@ -90,5 +98,10 @@ clean:
 	rm -f ${LOG}
 	rm -f ${OUT}
 	rm -f ${OUTDIR}/libemux_widgets${DEX}
-#	rm -f ${OUTDIR}/modules/*${DEX}
+	rm -f ${OUTDIR}/modules/*${DEX}
+source2tgz:
+	@ echo 'creating emux51.tar.bz2..'
+	@ tar -czf emux51.tar.gz src/ include/ Makefile README
+rpmbuild: source2tgz
+	mv emux51.tar.bz2 rpmbuild/
 

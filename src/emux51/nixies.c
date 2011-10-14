@@ -1,5 +1,5 @@
 /*
- * arch/posx.c - POSIX architecture dependent code.
+ * arch/posix.c - POSIX architecture dependent code.
  */
 #include <unistd.h>
 #include <signal.h>
