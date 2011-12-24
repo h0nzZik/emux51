@@ -1,11 +1,6 @@
 /*
- * widgets/7seg.c - implementation of SevenSeg widget.
+ * widgets/7seg.c - SevenSeg widget.
  */
-
-int test_func(void)
-{
-	return 5;
-}
 
 #include <gtk/gtk.h>
 #include <widgets/7seg.h>
@@ -27,62 +22,112 @@ GdkPoint vertical_segment[6]={	{SEG_OBESITY/2, 0},
 				{0, SEG_TRLEN}};
 
 
-void draw_segment(GtkWidget *instance, GdkPoint *seg_points,
-			GdkColor filler, GdkColor contour, int x, int y)
+void draw_segment_filler(cairo_t *cr, GdkPoint *seg_points,
+			sseg_color c, int x, int y)
 {
 	int i;
-	GdkGC *gc;
-	GdkPoint points[6];
 
-	for(i=0; i<6; i++) {
-		points[i].x=seg_points[i].x+x;
-		points[i].y=seg_points[i].y+y;
+	cairo_new_path(cr);
+	for (i=0; i<6; i++) {
+		cairo_line_to(cr, 1+x+seg_points[i].x, 1+y+seg_points[i].y);
 	}
+	cairo_close_path(cr);
 
-	/*	filler	*/
-	gc=gdk_gc_new(instance->window);
-	gdk_gc_set_rgb_fg_color(gc, &filler);	
-	gdk_draw_polygon(instance->window, gc, TRUE, points, 6);	
-	g_object_unref(gc);
 
-	/*	contour	*/
-	gc=gdk_gc_new(instance->window);
-	gdk_gc_set_rgb_fg_color(gc, &contour);	
-	gdk_draw_polygon(instance->window, gc, FALSE, points, 6);	
-	g_object_unref(gc);
+	cairo_set_source_rgba(cr, c.red, c.green, c.blue, c.alpha);
+	cairo_fill(cr);
+
 }
 
-void draw_seven_seg(GtkWidget *instance)
+static void draw_segment_contour(cairo_t *cr, GdkPoint *seg_points, 
+				sseg_color c, int x, int y)
 {
-	guchar segs;
-	int bits[8];
 	int i;
-	GdkColor fc, ec, cc;
 
-	cc=SEVEN_SEG(instance)->contour_color;
-	ec=SEVEN_SEG(instance)->empty_color;
-	fc=SEVEN_SEG(instance)->filler_color;
+	cairo_new_path(cr);
+	for (i=0; i<6; i++) {
+		cairo_line_to(cr, 1+x+seg_points[i].x, 1+y+seg_points[i].y);
+	}
+	cairo_close_path(cr);
+
+	cairo_set_source_rgb(cr, c.red, c.green, c.blue);
+	cairo_stroke(cr);
+}
+
+
+void redraw_seven_seg_fillers(GtkWidget *instance)
+{
+	int i;
+	int bits[8];
+	guchar segs;
+	cairo_t *cr;
+	sseg_color on, off;
+
+
+		
+	on=SEVEN_SEG(instance)->on;
+	off=SEVEN_SEG(instance)->off;
 	segs=SEVEN_SEG(instance)->lighting_segments;
 
 	for (i=0;i<8; i++)
 		bits[i]=(segs>>i)&1;
 
-	draw_segment(instance, horizontal_segment, bits[0]?fc:ec, cc,
+
+	cr=gdk_cairo_create(instance->window);
+	cairo_set_line_width(cr, 0.1);
+	draw_segment_filler(cr, horizontal_segment, bits[0]?on:off,
 			SEG_OBESITY/2, 0);
-	draw_segment(instance, vertical_segment, bits[1]?fc:ec, cc,
+	draw_segment_filler(cr, vertical_segment, bits[1]?on:off,
 			SEG_SGLEN, SEG_TRLEN);
-	draw_segment(instance, vertical_segment, bits[2]?fc:ec, cc,
+	draw_segment_filler(cr, vertical_segment, bits[2]?on:off,
 			SEG_SGLEN, SEG_SGLEN+SEG_TRLEN);
-	draw_segment(instance, horizontal_segment, bits[3]?fc:ec, cc,
+	draw_segment_filler(cr, horizontal_segment, bits[3]?on:off,
 			SEG_OBESITY/2, 2*SEG_SGLEN);
-	draw_segment(instance, vertical_segment, bits[4]?fc:ec, cc,
+	draw_segment_filler(cr, vertical_segment, bits[4]?on:off,
 			0, SEG_SGLEN+SEG_TRLEN);
-	draw_segment(instance, vertical_segment, bits[5]?fc:ec, cc,
+	draw_segment_filler(cr, vertical_segment, bits[5]?on:off,
 			0, SEG_TRLEN);
-	draw_segment(instance, horizontal_segment, bits[6]?fc:ec, cc,
+	draw_segment_filler(cr, horizontal_segment, bits[6]?on:off,
 			SEG_OBESITY/2, SEG_SGLEN);
+
+	cairo_destroy(cr);
 }
 
+
+void redraw_seven_seg_contours(GtkWidget *instance)
+{
+	sseg_color black;
+	cairo_t *cr;
+
+	black=SEVEN_SEG(instance)->con;
+
+	cr=gdk_cairo_create(instance->window);
+
+	draw_segment_contour(cr, horizontal_segment, black,
+			SEG_OBESITY/2, 0);
+	draw_segment_contour(cr, vertical_segment, black,
+			SEG_SGLEN, SEG_TRLEN);
+	draw_segment_contour(cr, vertical_segment, black,
+			SEG_SGLEN, SEG_SGLEN+SEG_TRLEN);
+	draw_segment_contour(cr, horizontal_segment, black,
+			SEG_OBESITY/2, 2*SEG_SGLEN);
+	draw_segment_contour(cr, vertical_segment, black,
+			0, SEG_SGLEN+SEG_TRLEN);
+	draw_segment_contour(cr, vertical_segment, black,
+			0, SEG_TRLEN);
+	draw_segment_contour(cr, horizontal_segment, black,
+			SEG_OBESITY/2, SEG_SGLEN);
+	cairo_destroy(cr);
+}
+
+void seven_seg_expose(GtkWidget *instance)
+{
+	/*	redraw contour	*/
+	redraw_seven_seg_contours(instance);
+
+	/*	draw fillers	*/
+	redraw_seven_seg_fillers(instance);
+}
 
 static void seven_seg_class_init(SevenSegClass *class)
 {
@@ -91,23 +136,31 @@ static void seven_seg_class_init(SevenSegClass *class)
 
 static void seven_seg_init(SevenSeg *instance)
 {
-	/*	black contour	*/
-	instance->contour_color.red=0;
-	instance->contour_color.green=0;
-	instance->contour_color.blue=0;
-	/*	red filler	*/
-	instance->filler_color.red=0xFFFF;
-	instance->filler_color.green=0;
-	instance->filler_color.blue=0;
-	/*	white empty	*/
-	instance->empty_color.red=0xFFFF;
-	instance->empty_color.green=0xFFFF;
-	instance->empty_color.blue=0xFFFF;
+
+	/*	turned on	*/
+	instance->on.red=1;
+	instance->on.green=0;
+	instance->on.blue=0;
+	instance->on.alpha=0.8;
+	/*	turned off	*/
+	instance->off.red=1;
+	instance->off.green=1;
+	instance->off.blue=1;
+	instance->off.alpha=1;
+	/*	contour 	*/
+	instance->con.red=0;
+	instance->con.green=0;
+	instance->con.blue=0;
+	instance->con.alpha=0;
+
+
 
 	g_signal_connect(instance, "expose-event",
-			G_CALLBACK(draw_seven_seg), NULL);
+			G_CALLBACK(seven_seg_expose), NULL);
+
 	gtk_widget_set_size_request(GTK_WIDGET(instance),
-				SEG_SGLEN+SEG_OBESITY+1, 2*SEG_SGLEN+SEG_OBESITY+1);
+				SEG_AREA_XSIZE, SEG_AREA_YSIZE);
+
 	gtk_widget_show(GTK_WIDGET(instance));
 	
 }
@@ -138,10 +191,12 @@ GType seven_seg_get_type(void)
 	return type;
 }
 
+
 GtkWidget *seven_seg_new(void)
 {
 	return GTK_WIDGET(g_object_new(seven_seg_get_type(), NULL));
 }
+
 
 void seven_seg_set_segments(GtkWidget *widget, guchar data)
 {
@@ -155,6 +210,9 @@ void seven_seg_set_segments(GtkWidget *widget, guchar data)
 		printf("7seg_widget:\tcan't redraw NULL\n");
 		return;
 	}
-	draw_seven_seg(GTK_WIDGET(instance));
+	/*	redraw 7seg	*/
+	gtk_widget_set_size_request(GTK_WIDGET(instance), 0, 0);
+	gtk_widget_set_size_request(GTK_WIDGET(instance),
+					SEG_AREA_XSIZE, SEG_AREA_YSIZE);	
 }
 
