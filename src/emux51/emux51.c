@@ -5,16 +5,16 @@
  *	 rewrite 'do_int_requests'
  *
  */
+
+/* POSIX headers */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
 #include <signal.h>
-#include <dlfcn.h>
 
-#include <glib.h>
-
+/* emux51 headers */
 #include <settings.h>
 #include <emux51.h>
 #include <instructions.h>
@@ -24,8 +24,10 @@
 #include <gui.h>
 #include <alarm.h>
 
-/* check this: */
-#define FORCE_READ 0
+/* other headers */
+#include <glib.h>
+
+
 
 /*	is running?	*/
 volatile gint G_GNUC_MAY_ALIAS running;
@@ -54,6 +56,8 @@ unsigned long counter=0;
 
 /*	oscilator frequency	*/
 unsigned long Fosc=12000000;
+
+
 
 
 void export_all(void)
@@ -87,8 +91,6 @@ int addr_to_port(unsigned addr)
 }
 
 
-int exporting=0;
-
 void update_port(int port)
 {
 	unsigned char old=port_collectors[port];
@@ -105,9 +107,7 @@ void update_port(int port)
 			set_bit(IE1);
 	}
 
-	exporting=1;
 	module_export_port(port);
-	exporting=0;
 
 }
 /*	<API for instructions>	*/
@@ -173,24 +173,6 @@ void write_Acc(char data)
 {
 	data_memory[Acc]=data;
 }
-void write_carry(int data)
-{
-	data&=1;
-	if (data)
-		set_bit(CARRY);
-	else
-		clr_bit(CARRY);
-
-}
-void write_acarry(int data)
-{
-	data&=1;
-	if (data)
-		set_bit(ACARRY);
-	else
-		clr_bit(ACARRY);	
-}
-
 void add_Acc(unsigned char increment)
 {
 	unsigned char acc;
@@ -199,9 +181,9 @@ void add_Acc(unsigned char increment)
 
 	acc=read_Acc();	
 	sum=acc+increment;
-	write_carry(sum>255);
+	write_bit(CARRY, sum>255);
 	nibble_sum=(acc&0x0F)+increment;
-	write_acarry(nibble_sum>15);
+	write_bit(ACARRY, nibble_sum>15);
 	write_Acc((unsigned char) sum);
 }
 void sub_Acc(unsigned char decrement)
@@ -212,13 +194,11 @@ void sub_Acc(unsigned char decrement)
 
 	acc=read_Acc();
 	sum=acc-decrement;
-	write_carry(sum<0);
+	write_bit(CARRY, sum<0);
 	nibble_sum=(acc&0x0F)-decrement;
-	write_acarry(nibble_sum<0);
-//	printf("sub: 0x%x\n", sum);
+	write_bit(ACARRY, nibble_sum<0);
 	write_Acc((unsigned char) sum);	
 }
-
 
 
 
@@ -228,12 +208,12 @@ void sub_Acc(unsigned char decrement)
  *	I wanna be rev3rse engineer ;)
  */
 
-inline unsigned char addr_to_bit_bit(unsigned char addr)
+unsigned char addr_to_bit_bit(unsigned char addr)
 {
 	return(addr&0x07);
 }
 
-inline unsigned char addr_to_bit_byte(unsigned char addr)
+unsigned char addr_to_bit_byte(unsigned char addr)
 {
 	addr&=~0x07;
 	if (addr&0x80)
@@ -241,14 +221,14 @@ inline unsigned char addr_to_bit_byte(unsigned char addr)
 	return(0x20|(addr>>3));
 }
 
-void set_bit(unsigned char addr)
+void set_bit(unsigned char bit_addr)
 {
 	unsigned char byte;
 	unsigned char bit;
 	unsigned char data;
 
-	byte=addr_to_bit_byte(addr);
-	bit=addr_to_bit_bit(addr);
+	byte=addr_to_bit_byte(bit_addr);
+	bit=addr_to_bit_bit(bit_addr);
 
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
@@ -259,14 +239,14 @@ void set_bit(unsigned char addr)
 
 }
 
-void clr_bit(unsigned char addr)
+void clr_bit(unsigned char bit_addr)
 {
 	unsigned char byte;
 	unsigned char bit;
 	unsigned char data;
 
-	byte=addr_to_bit_byte(addr);
-	bit=addr_to_bit_bit(addr);
+	byte=addr_to_bit_byte(bit_addr);
+	bit=addr_to_bit_bit(bit_addr);
 
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
@@ -276,31 +256,42 @@ void clr_bit(unsigned char addr)
 	write_data(byte, data);
 }
 
-void neg_bit(unsigned char addr)
+void write_bit(unsigned char bit, int data)
+{
+	data&=1;
+	if (data)
+		set_bit(bit);
+	else
+		clr_bit(bit);
+}
+
+void neg_bit(unsigned char bit_addr)
 {
 	unsigned char byte;
 	unsigned char bit;
 	unsigned char data;
 
-	byte=addr_to_bit_byte(addr);
-	bit=addr_to_bit_bit(addr);
+
+	byte=addr_to_bit_byte(bit_addr);
+	bit=addr_to_bit_bit(bit_addr);
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
 	else
 		data=data_memory[byte];
 	data^=1<<bit;
 	write_data(byte, data);
+
 }
 
 
-int test_bit(unsigned char addr)
+int test_bit(unsigned char bit_addr)
 {
 	unsigned char byte;
 	unsigned char bit;
 
-	byte=addr_to_bit_byte(addr);
-	bit=addr_to_bit_bit(addr);
-	return(data_memory[byte]&(1<<bit));
+	byte=addr_to_bit_byte(bit_addr);
+	bit=addr_to_bit_bit(bit_addr);
+	return(data_memory[byte]&(1<<bit)?1:0);
 }
 
 /*	</API for instructions>	*/
@@ -332,16 +323,16 @@ void init_machine(void)
 /*	TODO:	external, second timer	*/
 
 
-inline int timer_0_mode(void)
+int timer_0_mode(void)
 {
 	return (data_memory[TMOD]&0x03);
 }
 
-inline int timer_1_mode(void)
+int timer_1_mode(void)
 {
 	return ((data_memory[TMOD]>>4)&0x03);
 }
-inline int timer_0_event(void)
+int timer_0_event(void)
 {
 	if ((data_memory[TMOD]&0x04) == 0)
 		return 1;
@@ -350,7 +341,7 @@ inline int timer_0_event(void)
 	return 0;
 }
 
-inline int timer_1_event(void)
+int timer_1_event(void)
 {
 	if ((data_memory[TMOD]&0x40) == 0)
 		return 1;
@@ -358,7 +349,7 @@ inline int timer_1_event(void)
 		return 1;
 	return 0;
 }
-inline int timer_0_running(void)
+int timer_0_running(void)
 {
 	/*	TR0 is not set	*/
 	if ((data_memory[TCON]&0x10) == 0)
@@ -370,7 +361,7 @@ inline int timer_0_running(void)
 	return 0;
 }
 
-inline int timer_1_running(void)
+int timer_1_running(void)
 {
 	/*	TR1 is not set	*/
 	if ((data_memory[TCON]&0x40) == 0)
@@ -589,8 +580,6 @@ void do_every_instruction_stuff(int times)
 
 	while (times){
 		counter++;
-
-/*		set_irqs();				*/
 		do_timers_stuff();
 		times--;
 	}
