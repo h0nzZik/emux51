@@ -46,18 +46,6 @@ typedef struct DLIST {
 	
 } dlist_t;
 
-/*
-int read_port(void *space, int port, char *data);
-int write_port(void *space, int port, char data);
-
-int alloc_bits(void *space, int port, char mask);
-int free_bits(void *space, int port, char mask);
-
-int time_queue_add(void *space, unsigned ms,
-			void (*f)(void *space, void *data), void *data);
-int cycle_queue_add(void *space, unsigned cycles,
-			void (*f)(void *space, void *data), void *data);
-*/
 #ifdef BUILDING_MODULE
 int (*read_port)(void *space, int port, char *data)=NULL;
 int (*write_port)(void *space, int port, char data)=NULL;

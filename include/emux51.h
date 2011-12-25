@@ -132,7 +132,7 @@ void set_bit(unsigned char addr);
 void clr_bit(unsigned char addr);
 void neg_bit(unsigned char addr);
 
-void write_carry(int data);
+void write_bit(unsigned char bit, int data);
 
 /*	stack operations	*/
 void push(unsigned char data);
