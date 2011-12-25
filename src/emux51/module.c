@@ -60,10 +60,13 @@ int alloc_bits(void *space, int port, char mask)
 	if (port_usage[port]&mask){
 		return (-2);
 	}
+
 	port_usage[port]|=mask;
 	modules[id].mask[port]|=mask;
+
 	return 0;
 }
+
 
 int free_bits(void *space, int port, char mask)
 {
@@ -74,7 +77,13 @@ int free_bits(void *space, int port, char mask)
 		fprintf(stderr, "[emux51]\tBad module ID\n");
 		return (-1);
 	}
+
 	mask&=modules[id].mask[port];
+	/*	reset port bits		*/
+	port_externals[port]|=mask;
+	update_port(port);
+
+	/*	free alloced bits	*/
 	port_usage[port]&=~mask;
 	modules[id].mask[port]&=~mask;
 	return 0;
@@ -97,13 +106,12 @@ int write_port(void *space, int port, char data)
 	new|=data&modules[id].mask[port];
 	new&=data|~modules[id].mask[port];
 
-//	printf("writing 0x%2x to port\n", (int)0+new);
-//	write_port(port, new);
 
 	port_externals[port]=new;
 	update_port(port);
 	return 0;
 }
+
 int read_port(void *space, int port, char *data)
 {
 	int id;
@@ -127,11 +135,6 @@ int add_to_queue(unsigned x, dlist_t **queue, void (*f)(void *, void *),
 
 	/*	create node	*/
 	new=g_malloc(sizeof(dlist_t));
-/*	if (new == NULL) {
-		fprintf(stderr, "[emux]\tOOM while queueing\n");
-		return -2;
-	}
-*/
 	new->f=f;
 	new->idx=idx;
 	new->data=data;
@@ -169,14 +172,12 @@ int add_to_queue(unsigned x, dlist_t **queue, void (*f)(void *, void *),
 
 void perform_queue(int steps, dlist_t **queue)
 {
-//	int i=0;
 	void *space;
 	dlist_t *entry;
 	dlist_t *tmp;
 
 	entry=*queue;
 	while (entry) {
-//		i++;
 		if (entry->dt < steps) {
 			/*	perform the operation	*/
 			if (entry->f){
@@ -267,12 +268,6 @@ void time_queue_perform(void)
 	perform_queue(1, &time_queue);
 }
 
-#if 0
-int emulator_state(void)
-{
-	return running;
-}
-#endif
 
 
 /*******************************************************************************
@@ -346,7 +341,6 @@ int module_new(char *path)
 {
 	int i;
 	module_t *mod;
-//	void *mod_rval;
 	void *space;
 
 	if (path == NULL) {
@@ -404,7 +398,8 @@ int module_destroy(void *space, const char *reason)
 
 /*		free alloced bits	*/
 	for(i=0; i<4; i++) {
-		port_usage[i]|=mod->mask[i];
+//		port_usage[i]|=mod->mask[i];
+		free_bits(space, i,0xFF);
 	}
 	g_free(mod->space);
 	close_lib(mod->handle);
@@ -434,6 +429,7 @@ void module_destroy_all(const char *reason)
 int modules_init(void)
 {
 	memset(modules, 0, MODULE_CNT*sizeof(module_t));
+	memset(port_usage, 0, sizeof(port_usage));
 	return 0;
 }
 
