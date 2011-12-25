@@ -11,7 +11,7 @@
 *	Standard Windows
 
 		Dependencies:
-*	GTK+, glibc
+*	GTK+, cairo, glibc
 
 
 
@@ -29,6 +29,7 @@
 *	* 3x7seg dynamic display
 *	* 4x7seg dynamic display
 *	* 8x7seg dynamic display
+*	* 3x4 matrix keyboard
 
 		TODO:
 *	More config options

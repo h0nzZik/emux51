@@ -1,6 +1,7 @@
 # Makefile for linux and linux to windows cross-compiling
 CFLAGS=-c -Wall -O2 -Wformat `${PKG-CONFIG} --cflags gtk+-2.0 glib-2.0`
 INCLUDE=-I include
+GTK_LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0`
 
 ifeq (${arch}, windows)
 	PKG-CONFIG=mingw32-pkg-config
@@ -10,10 +11,10 @@ ifndef (${OUTDIR})
 endif
 
 ifeq (${debug},1)
-	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm 
+	LDFLAGS=${GTK_LDFLAGS} -lwinmm 
 	OUT=${OUTDIR}/emux51-con.exe
 else
-	LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0 gthread-2.0` -lwinmm -mwindows
+	LDFLAGS=${GTK_LDFLAGS} -lwinmm -mwindows
 	OUT=${OUTDIR}/emux51.exe
 endif
 	DEX=.dll
@@ -22,7 +23,7 @@ endif
 else
 	PKG-CONFIG=pkg-config
 	arch=nixies
-	LDFLAGS=`${PKG-CONFIG} --libs gtk+-2.0 gthread-2.0`
+	LDFLAGS=${GTK_LDFLAGS}
 ifndef (${OUTDIR})
 	OUTDIR=out/nixies
 endif
@@ -37,9 +38,7 @@ DEFINES=-DMODULE_EXTENSION=\"${DEX}\" -DHOME_VAR=\"${HOME_VAR}\"
 ifndef (${OBJ})
 	OBJ=.obj/${arch}
 endif
-ifndef (${LOG})
-	LOG=out/${arch}/log.txt
-endif
+
 
 archtarget=${arch}
 
@@ -57,14 +56,13 @@ widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o
 
 build:	${targets} gui alarm
 	@ echo 'linking..'
-	@ ${CC} ${BUILD} -L${OUTDIR} -lemux_widgets ${objects} ${LDFLAGS}  -o ${OUT}	\
-	  >> ${LOG}
+	@ ${CC} ${BUILD} -L${OUTDIR} -lemux_widgets ${objects} ${LDFLAGS}  -o ${OUT}
 
 build_all: widgets build modules
 
 ${targets}:
 	@ echo '${CC} src/$@.c'
-	@ ${CC} ${INCLUDE} ${CFLAGS} ${DEFINES} -o ${OBJ}/$@.o src/emux51/$@.c 2>>${LOG}
+	@ ${CC} ${INCLUDE} ${CFLAGS} ${DEFINES} -o ${OBJ}/$@.o src/emux51/$@.c
 
 mods:
 	@ make --makefile=modules/Makefile ARCH=${ARCH}
@@ -88,20 +86,12 @@ ${modules}:
 	@ echo 'linking ${OBJ}/modules/${@:.mod=.o}'
 	@ ${CC} -shared -L${OUTDIR} -lemux_widgets -o ${OUTDIR}/modules/${@:.mod=${DEX}}\
 		${OBJ}/modules/${@:.mod=.o} `${PKG-CONFIG} --libs gtk+-2.0`
-log:
-	@ cat ${LOG}
 lines:
 	@ cat src/emux51/*.c src/modules/*.c src/widgets/*.c include/*.h Makefile | wc -l
 clean:
 	rm -f ${OBJ}/*.o
 	rm -f ${OBJ}/modules/*.o
-	rm -f ${LOG}
 	rm -f ${OUT}
 	rm -f ${OUTDIR}/libemux_widgets${DEX}
 	rm -f ${OUTDIR}/modules/*${DEX}
-source2tgz:
-	@ echo 'creating emux51.tar.bz2..'
-	@ tar -czf emux51.tar.gz src/ include/ Makefile README
-rpmbuild: source2tgz
-	mv emux51.tar.bz2 rpmbuild/
 
