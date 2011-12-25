@@ -46,14 +46,18 @@ static void port_select(PortSelector *ps, inst_t *self)
 	int i;
 
 	port=port_selector_get_port(ps);
+	if (port == self->port)
+		return;
+
 	printf("[switch:%d]\tport %d was selected\n", self->id, port);
 	if (alloc_bits(self, port, 0xFF)){
 		printf("[switch:%d]\tcan't allocate port %d\n", self->id, port);
+		port_selector_set_port(ps, self->port);
 		return;
 	}
-	/* reset port */
-	write_port(self, self->port, 0xFF);
+	/* free port */
 	free_bits(self, self->port, 0xFF);
+
 	/* reset buttons */
 	for (i=0; i<8; i++) {
 		gtk_toggle_button_set_active
@@ -107,7 +111,7 @@ int module_init(inst_t *self)
 		}
 	}
 	if (j == 4) {
-		fprintf(stderr, "[switch]\tno empty port found\n");
+		fprintf(stderr, "[switch:%d]\tno empty port found\n", self->id);
 		return -1;
 	}
 	gtk_widget_show_all(main_box);
@@ -118,9 +122,6 @@ int module_init(inst_t *self)
 void module_exit(inst_t *self, const char *str)
 {
 	printf("[switch:%d] exiting because of %s\n", self->id, str);
-
-	write_port(self, self->port, 0xFF);
-	free_bits(self, self->port, 0xFF);
 
 	gui_remove(self->window);
 }
