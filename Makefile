@@ -54,11 +54,17 @@ widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o
 .PHONY: build_all
 .PHONY: build
 
+
+build_all: directory widgets build modules
+
+directory:
+	mkdir -p ${OBJ}/modules
+
+
 build:	${targets} gui alarm
 	@ echo 'linking..'
 	@ ${CC} ${BUILD} -L${OUTDIR} -lemux_widgets ${objects} ${LDFLAGS}  -o ${OUT}
 
-build_all: widgets build modules
 
 ${targets}:
 	@ echo '${CC} src/$@.c'
