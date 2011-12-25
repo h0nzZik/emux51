@@ -1,6 +1,8 @@
 /*
  * instructions.c - 8051 instruction set, not fully implemented.
  */
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <instructions.h>
@@ -9,8 +11,10 @@
 
 opcode_t opcodes[256];
 
+/****************************************************************/
+/*			MOV, MOVC				*/
+/****************************************************************/
 
-/*		<mov instructions>		*/
 void mov_rx_imm8(unsigned short idx)
 {
 	unsigned char data;
@@ -127,7 +131,7 @@ void mov_c_addr(unsigned short idx)
 
 	addr=read_code(idx+1);
 	bit=test_bit(addr);
-	write_carry(bit);
+	write_bit(CARRY, bit);
 
 	PC+=2;
 }
@@ -183,7 +187,6 @@ void mov_addr_addr(unsigned short idx)
 	write_data(dest, data);
 	PC+=3;
 }
-
 void movc_a_code_dptr(unsigned short idx)
 {
 	unsigned short addr;
@@ -206,6 +209,9 @@ void movc_a_code_pc(unsigned short idx)
 	PC++;
 }
 
+/****************************************************************/
+/*			XCH, XCHD, SWAP				*/
+/****************************************************************/
 void xch_a_addr(unsigned short idx)
 {
 	unsigned char adata;
@@ -218,7 +224,6 @@ void xch_a_addr(unsigned short idx)
 	write_data(addr, adata);
 	PC+=2;
 }
-
 void xch_a_rx(unsigned short idx)
 {
 	unsigned char reg;
@@ -230,8 +235,6 @@ void xch_a_rx(unsigned short idx)
 	write_register(reg, adata);
 	PC++;
 }
-
-
 void xch_a_at_rx(unsigned short idx)
 {
 	unsigned char adata;
@@ -246,7 +249,6 @@ void xch_a_at_rx(unsigned short idx)
 	write_Acc(rdata);
 	PC++;
 }
-
 void xchd_a_at_rx(unsigned short idx)
 {
 	unsigned char adata;
@@ -267,12 +269,18 @@ void xchd_a_at_rx(unsigned short idx)
 	write_Acc(adata);
 	PC++;
 }
+void swap_a(unsigned short idx)
+{
+	unsigned char a;
+	a=read_Acc()>>4;
+	a|=read_Acc()<<4;
+	write_Acc(a);
+	PC++;
+}
 
-
-/*		</mov instructions>		*/
-
-
-/*		<byte conditional jumps>		*/
+/****************************************************************/
+/*			DJNZ, JZ, JNZ, CJNE			*/
+/****************************************************************/
 void djnz_rx_addr(unsigned short idx)
 {
 	int reg;
@@ -339,7 +347,7 @@ void cjne_rx_imm8_addr(unsigned short idx)
 	PC+=3;
 	if (rdata != data)
 		PC+=inc;
-	write_carry(rdata < data);
+	write_bit(CARRY, rdata < data);
 }
 void cjne_at_rx_imm8_addr(unsigned short idx)
 {
@@ -353,7 +361,7 @@ void cjne_at_rx_imm8_addr(unsigned short idx)
 	PC+=3;
 	if (rdata != data)
 		PC+=inc;
-	write_carry(rdata < data);
+	write_bit(CARRY, rdata < data);
 }
 void cjne_a_imm8_addr(unsigned short idx)
 {
@@ -368,7 +376,7 @@ void cjne_a_imm8_addr(unsigned short idx)
 	PC+=3;
 	if (a != data)
 		PC+=inc;
-	write_carry(a < data);
+	write_bit(CARRY, a < data);
 }
 
 void cjne_a_addr_addr(unsigned short idx)
@@ -387,13 +395,13 @@ void cjne_a_addr_addr(unsigned short idx)
 	PC+=3;
 	if (a != data)
 		PC+=inc;
-	write_carry(a < data);
+
+	write_bit(CARRY, a < data);
 }
 
-/*		</byte conditional jumps>		*/
-
-
-/*		<setb instructions>		*/
+/****************************************************************/
+/*			SETB, CLR, CPL				*/
+/****************************************************************/
 void setb_addr(unsigned short idx)
 {
 	set_bit(read_code(idx+1));
@@ -401,12 +409,9 @@ void setb_addr(unsigned short idx)
 }
 void setb_c(unsigned short idx)
 {
-	clr_bit(CARRY);
+	set_bit(CARRY);
 	PC++;
 }
-/*		</setb instructions>		*/
-
-/*		<clr instructions>		*/
 void clr_addr(unsigned short idx)
 {
 	clr_bit(read_code(idx+1));
@@ -422,17 +427,9 @@ void clr_a(unsigned short idx)
 	write_Acc(0);
 	PC++;
 }
-
 void cpl_addr(unsigned short idx)
 {
-	unsigned char addr;
-	addr=read_code(idx+1);
-
-	if (test_bit(addr)) {
-		clr_bit(addr);
-	} else {
-		set_bit(addr);
-	}
+	neg_bit(read_code(idx+1));
 	PC+=2;
 }
 void cpl_c(unsigned short idx)
@@ -445,9 +442,10 @@ void cpl_a(unsigned short idx)
 	write_Acc(~read_Acc());
 	PC++;
 }
-/*		</clr instructions>		*/
 
-/*		<bit conditional jumps>		*/
+/****************************************************************/
+/*			JB, JBC, JNB, JC, JNC			*/
+/****************************************************************/
 void jb(unsigned short idx)
 {
 
@@ -476,8 +474,6 @@ void jbc(unsigned short idx)
 		clr_bit(addr);
 	}
 }
-
-
 void jnb(unsigned short idx)
 {
 	signed char inc;
@@ -516,11 +512,10 @@ void jnc(unsigned short idx)
 	}
 
 }
-/*	</bit conditional jumps>	*/
 
-
-
-
+/****************************************************************/
+/*			JMP, LJMP, AJMP, SJMP			*/
+/****************************************************************/
 void ljmp(unsigned short idx)
 {
 	PC=(code_memory[idx+2]<<8)|(code_memory[idx+1]);
@@ -544,7 +539,9 @@ void jmp_a_dptr(unsigned short idx)
 	PC=dest;
 }
 
-
+/****************************************************************/
+/*			ACALL, LCALL				*/
+/****************************************************************/
 void acall(unsigned short idx)
 {
 	/*	push return adress onto stack, little-endian	*/
@@ -553,8 +550,6 @@ void acall(unsigned short idx)
 
 	PC=(((code_memory[idx]>>5)&0x07)<<8)|(code_memory[idx+1]);
 }
-
-
 void lcall(unsigned short idx)
 {
 	/*	push return adress onto stack, little-endian	*/
@@ -562,7 +557,6 @@ void lcall(unsigned short idx)
 	push((PC+2)>>8);
 
 	PC=(code_memory[idx+2]<<8)|(code_memory[idx+1]);
-
 }
 
 void ret(unsigned short idx)
@@ -585,7 +579,9 @@ void reti(unsigned short idx)
 }
 
 
-/*	stack operations	*/
+/****************************************************************/
+/*			PUSH, POP				*/
+/****************************************************************/
 void push_addr(unsigned short idx)
 {
 	unsigned char addr;
@@ -603,9 +599,9 @@ void pop_addr(unsigned short idx)
 	PC+=2;
 }
 
-
-
-/*	aritmetic instructions	*/
+/****************************************************************/
+/*			ADD, ADDC, SUBB				*/
+/****************************************************************/
 void add_a_imm8(unsigned short idx)
 {
 	unsigned char increment;
@@ -692,6 +688,9 @@ void subb_a_at_rx(unsigned short idx)
 	sub_Acc(decrement);
 	PC++;
 }
+/****************************************************************/
+/*			INC, DEC				*/
+/****************************************************************/
 void inc_rx(unsigned short idx)
 {
 	unsigned char reg;
@@ -788,6 +787,10 @@ void dec_addr(unsigned short idx)
 	write_data(addr, data);
 	PC+=2;
 }
+
+/****************************************************************/
+/*			ANL, ORL, XRL				*/
+/****************************************************************/
 void anl_a_addr(unsigned short idx)
 {
 	unsigned char data;
@@ -863,7 +866,7 @@ void anl_c_addr(unsigned short idx)
 	bit=test_bit(read_code(idx+1));
 	c=test_bit(CARRY);
 	c&=bit;
-	write_carry(c);
+	write_bit(CARRY, c);
 	PC+=2;
 }
 void anl_c_naddr(unsigned short idx)
@@ -874,7 +877,7 @@ void anl_c_naddr(unsigned short idx)
 	bit=test_bit(read_code(idx+1));
 	c=!test_bit(CARRY);
 	c&=bit;
-	write_carry(c);
+	write_bit(CARRY, c);
 	PC+=2;
 
 }
@@ -957,7 +960,7 @@ void orl_c_addr(unsigned short idx)
 	c=test_bit(CARRY);
 	addr=read_code(idx+1);
 	c|=test_bit(addr);
-	write_carry(c);
+	write_bit(CARRY, c);
 	PC+=2;
 }
 void orl_c_naddr(unsigned short idx)
@@ -968,7 +971,7 @@ void orl_c_naddr(unsigned short idx)
 	c=test_bit(CARRY);
 	addr=read_code(idx+1);
 	c|=!test_bit(addr);
-	write_carry(c);
+	write_bit(CARRY, c);
 	PC+=2;
 }
 
@@ -1043,6 +1046,10 @@ void xrl_a_rx(unsigned short idx)
 	write_Acc(a);
 	PC++;
 }
+
+/****************************************************************/
+/*			MUL, DIV				*/
+/****************************************************************/
 void div_ab(unsigned short idx)
 {
 	unsigned char a;
@@ -1080,6 +1087,10 @@ void mul_ab(unsigned short idx)
 	PC++;
 }
 
+
+/****************************************************************/
+/*			DA, RR, RRC, RL, RLC, NOP		*/
+/****************************************************************/
 void da_a(unsigned short idx)
 {
 	unsigned int a;
@@ -1088,18 +1099,11 @@ void da_a(unsigned short idx)
 		a+=0x06;
 	if ((a&0xF0)>0x90 || test_bit(CARRY))
 		a+=0x60;
-	write_carry(a>>8?1:0);
+	write_bit(CARRY, a>>8?1:0);
 	write_Acc(a&0xFF);
 	PC++;
 }
-void swap_a(unsigned short idx)
-{
-	unsigned char a;
-	a=read_Acc()>>4;
-	a|=read_Acc()<<4;
-	write_Acc(a);
-	PC++;
-}
+
 
 void rr_a(unsigned short idx)
 {
@@ -1123,7 +1127,7 @@ void rrc_a(unsigned short idx)
 	a>>=1;
 	a|=test_bit(CARRY)<<7;
 	write_Acc(a);
-	write_carry(flag);
+	write_bit(CARRY, flag);
 	PC++;
 }
 void rl_a(unsigned short idx)
@@ -1148,13 +1152,15 @@ void rlc_a(unsigned short idx)
 	a<<=1;
 	a|=test_bit(CARRY);
 	write_Acc(a);
-	write_carry(flag);
+	write_bit(CARRY, flag);
 	PC++;
 }
 void nop(unsigned short idx)
 {
 	PC++;
 }
+
+
 
 void empty(unsigned short idx)
 {
