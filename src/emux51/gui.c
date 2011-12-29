@@ -513,14 +513,14 @@ void gui_callback(void)
 
 
 static gboolean 
-gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * data)
+gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * module)
 {
-	module_destroy(data, "delete-event");
+	module_destroy(module, "delete-event");
 	return TRUE;
 }
 
 /*	add module into GUI scheme	*/
-void * gui_add(void *object, void *delete_data, const char *title)
+void * gui_add(void *object, void *module, const char *title)
 {
 	GtkWidget *window;
 
@@ -528,7 +528,7 @@ void * gui_add(void *object, void *delete_data, const char *title)
 	gtk_window_set_title(GTK_WINDOW(window), title);
 	gtk_container_add(GTK_CONTAINER(window), object);
 	g_signal_connect(window, "delete-event",
-			G_CALLBACK(gui_module_delete_event), delete_data);
+			G_CALLBACK(gui_module_delete_event), module);
 
 	gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
 	gtk_widget_show(window);
