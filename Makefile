@@ -1,5 +1,7 @@
 # Makefile for linux and linux to windows cross-compiling
-CFLAGS=-c -Wall -O2 -Wformat `${PKG-CONFIG} --cflags gtk+-2.0 glib-2.0`
+#TODO: -D GTK_DISABLE_DEPRECATED
+GTK_NEW_FLAGS=-D GTK_DISABLE_SINGLE_INCLUDES -DGDK_DISABLE_DEPRECATED 
+CFLAGS=-c -Wall -O2 -Wformat `${PKG-CONFIG} --cflags gtk+-2.0 glib-2.0` ${GTK_NEW_FLAGS}
 INCLUDE=-I include
 GTK_LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0`
 
@@ -46,8 +48,8 @@ targets=instructions emux51 module hex settings ${archtarget} gui alarm
 objects=${OBJ}/instructions.o ${OBJ}/emux51.o ${OBJ}/${archtarget}.o ${OBJ}/module.o \
 	${OBJ}/hex.o ${OBJ}/gui.o ${OBJ}/settings.o ${OBJ}/alarm.o
 
-widgets=port_selector 7seg
-widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o
+widgets=port_selector 7seg led
+widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o ${OBJ}/led.o
 
 
 .PHONY: clean

@@ -1,93 +1,42 @@
-/*	TODO: rewrite using LED widget (not implemented yet)	*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <gtk/gtk.h>
+#include <math.h>
 #include <time.h>
 
 
 #include <module.h>
 #include <widgets/port_selector.h>
+#include <widgets/led.h>
 
 typedef struct {
 	int id;
 
 	GtkWidget *window;
-	GtkWidget *da;
-	GtkWidget *label;
+	GtkWidget *leds[8];
+	int invert;
 	char port_data;
 	char port;
-	GdkColor filler_c;
-	GdkColor empty_c;
-}my_t;
+}instance_t;
 
 
-#define LED_SPACE 4
-#define LED_COUNT 8
-#define LED_RADIUS 24
-
-/*		leds are numbered from left to right	*/
-void led_set(GtkWidget *da, int led, GdkColor color)
-{
-	GdkColor black;
-	GdkGC *gc;
-
-	gc=gdk_gc_new(da->window);
-	gdk_gc_set_rgb_fg_color(gc, &color);
-	gdk_draw_arc(da->window, gc, 1,
-			/* x */	LED_SPACE/2+led*(LED_SPACE+LED_RADIUS),
-			/* y */ 0,
-				LED_RADIUS, LED_RADIUS, 0, 64*360);
-	g_object_unref(gc);
-
-	black.red=black.green=black.blue=0;
-	gc=gdk_gc_new(da->window);
-	gdk_gc_set_rgb_fg_color(gc, &black);
-	gdk_draw_arc(da->window, gc, 0,
-		/* x */	LED_SPACE/2+led*(LED_SPACE+LED_RADIUS),
-		/* y */ 0,
-			LED_RADIUS, LED_RADIUS, 0, 64*360);
-	g_object_unref(gc);
-}
-
-void clear_area(GtkWidget *da)
-{
-	GdkColor color;
-	GdkGC *gc;
-
-	color.red=0xFFFF;
-	color.green=0xFFFF;
-	color.blue=0xFFFF;
-
-	gc=gdk_gc_new(da->window);
-	gdk_gc_set_rgb_fg_color(gc, &color);
-
-	gdk_draw_rectangle(da->window, gc, 1, 0, 0,
-			/* x size */	LED_COUNT*(LED_RADIUS+LED_SPACE),
-			/* y size */	LED_RADIUS);
-}
-
-void update_area(GtkWidget *da, char data, my_t *in)
+static void update_leds(instance_t *self)
 {
 	int i;
+	char data;
+	if (self->invert)
+		data=~self->port_data;
+	else
+		data=self->port_data;
 
-	for(i=0; i<LED_COUNT; i++) {
-		led_set(da, 7-i, ((data>>i)&1)?in->filler_c:in->empty_c);
+
+	for (i=0; i<8; i++) {
+		led_set_active(self->leds[i], (data>>i)&1);
 	}
 }
 
-static void da_expose(GtkWidget *widget, GdkEventExpose *event, my_t *in)
-{
-	/*	set size of drawing area	*/
-	gtk_widget_set_size_request(widget,
-				LED_COUNT*(LED_RADIUS+LED_SPACE), LED_RADIUS+4);
-
-	update_area(widget, in->port_data, in);
-
-}
-
-
-void module_read(my_t *self, int port)
+static void module_read(instance_t *self, int port)
 {
 	if (port != self->port)
 		return;
@@ -95,63 +44,83 @@ void module_read(my_t *self, int port)
 	if (read_port(self, port, &self->port_data)) {
 		printf("[led]\tcan't read port\n");
 	}
-	update_area(self->da, self->port_data, self);
+	update_leds(self);
 }
 
-static void port_select(PortSelector *ps, my_t *self)
+static void port_select(PortSelector *ps, instance_t *self)
 {
+	printf("selected\n");
 	self->port=port_selector_get_port(ps);
 
 	if (read_port(self, self->port, &self->port_data)) {
 		printf("[led]\tcan't read port\n");
 	}
-	update_area(self->da, self->port_data, self);
+	update_leds(self);
 }
 
 
-void module_exit(my_t *self, char *reason)
+void module_exit(instance_t *self, char *reason)
 {
-	printf("[led]\texiting because of %s.\n", reason?reason:"_what_?");
+	int i;
+	printf("[led:%d]\texiting: %s.\n",self->id, reason);
+	for (i=0; i<8; i++) {
+		gtk_widget_destroy(self->leds[i]);
+	}
 	gui_remove(self->window);
 }
 
-int module_init(my_t *self)
+int module_init(instance_t *self)
 {
-	GtkWidget *box;
+	int i;
+	float c[3];
+	GtkWidget *vbox;
+	GtkWidget *led_box;
 	GtkWidget *select;
 
-	self->port_data=0xFF;
 
-	box=gtk_vbox_new(FALSE, 0);
-	gtk_container_set_border_width(GTK_CONTAINER(box), 5);
-	self->da=gtk_drawing_area_new();
-	gtk_widget_set_size_request(self->da, 100, 10);
-	g_signal_connect(self->da, "expose_event",
-			G_CALLBACK(da_expose), self);
+
+//	self->invert=1;
+
+
+	/*	create main box with port selector..	*/
+	vbox=gtk_vbox_new(FALSE, 0);
+	gtk_container_set_border_width(GTK_CONTAINER(vbox), 5);
 	select=h_port_selector_new();
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), self);
-	gtk_box_pack_start(GTK_BOX(box), select, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(box), self->da, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), select, FALSE, FALSE, 0);
+
+	i=rand()%3;
+	c[(i+0)%3]=(rand()%0x100)/(double)0x100;
+	if (c[(i+0)%3]<0.7)
+		c[(i+1)%3]=(0x80+(rand()%0x80))/(double)0x80;
+	else
+		c[(i+1)%3]=0;
+	c[(i+2)%3]=0;
 
 
-	/*	collor selection	*/
-	memset(&self->empty_c, 0xFF, sizeof(GdkColor));
-	memset(&self->filler_c, 0x00, sizeof(GdkColor));
-	switch(rand()%3) {
-		case 0:
-			self->filler_c.red=0xFFFF;
-			break;
-		case 1:
-			self->filler_c.green=0xFFFF;
-			break;
-		case 2:
-			self->filler_c.blue=0xFFFF;
-			break;
+	/*	.. and lots of LEDs	*/
+	led_box=gtk_hbox_new(FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(vbox), led_box, FALSE, FALSE, 0);
+	for (i=0; i<8; i++) {
+		self->leds[i]=led_new(12, 2);
+		led_set_rgb(self->leds[i], c[0], c[1], c[2]);
+		gtk_box_pack_end(GTK_BOX(led_box),
+				self->leds[i], FALSE, FALSE, 0);
 	}
-	gtk_widget_show_all(box);
+	/*	display port 0	*/
+	self->port=0;
+	if (read_port(self, self->port, &self->port_data)) {
+		printf("[led]\tcan't read port\n");
+	}
+	update_leds(self);
+	
 
-	self->window=gui_add(box, self, "LED panel");
+	gtk_widget_show_all(vbox);
+	self->window=gui_add(vbox, self, "LED panel");
+
+	
+
 
 	return 0;
 }
@@ -159,7 +128,7 @@ int module_init(my_t *self)
 
 module_info_t module_info={
 	"LED panel",
-	M_SPACE_SIZE	(sizeof(my_t)),
+	M_SPACE_SIZE	(sizeof(instance_t)),
 	M_INIT		(module_init),
 	M_EXIT		(module_exit),
 	M_PORT_CHANGED	(module_read),
