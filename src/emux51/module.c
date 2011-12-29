@@ -389,16 +389,13 @@ int module_destroy(void *space, const char *reason)
 
 
 
-	if (mod->info == NULL) {
-		printf("wtf?\n");
-	}
-	if (mod->info->exit){
+	if (mod->info && mod->info->exit){
 		mod->info->exit(mod->space, reason);
 	}
-
+	/*	disable port_changed handler	*/
+	mod->info->port_changed=NULL;
 /*		free alloced bits	*/
 	for(i=0; i<4; i++) {
-//		port_usage[i]|=mod->mask[i];
 		free_bits(space, i,0xFF);
 	}
 	g_free(mod->space);
