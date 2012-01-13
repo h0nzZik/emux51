@@ -60,10 +60,13 @@ static void led_class_init(LedClass *class)
 
 GType led_get_type(void)
 {
-	static GType type=0;
+	GType type=0;
+
+
+	type=g_type_from_name("emux51-led");
 
 	/*	first call?	*/
-	if(type == 0) {
+	if (type == 0) {
 		const GTypeInfo info =
 		{
 			sizeof(LedClass),
@@ -77,9 +80,10 @@ GType led_get_type(void)
 			(GInstanceInitFunc) led_init,
 		};
 		type=g_type_register_static(GTK_TYPE_DRAWING_AREA,
-					"led",
+					"emux51-led",
 					&info,0);
 	}
+
 	return type;
 }
 /****************	interface	*****************/

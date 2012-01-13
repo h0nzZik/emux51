@@ -168,8 +168,10 @@ static void seven_seg_init(SevenSeg *instance)
 
 GType seven_seg_get_type(void)
 {
-	static GType type=0;
+	GType type=0;
 
+
+	type=g_type_from_name("emux51-seven_seg");
 	/*	first call?	*/
 	if(type == 0) {
 		const GTypeInfo info =
@@ -185,7 +187,7 @@ GType seven_seg_get_type(void)
 			(GInstanceInitFunc) seven_seg_init,
 		};
 		type=g_type_register_static(GTK_TYPE_DRAWING_AREA,
-					"seven-seg",
+					"emux51-seven_seg",
 					&info,0);
 	}
 	return type;

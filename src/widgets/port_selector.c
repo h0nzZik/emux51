@@ -72,8 +72,10 @@ static void port_selector_class_init(PortSelectorClass *c)
 
 GType port_selector_get_type(void)
 {
-	static GType ps_type=0;
+	GType ps_type=0;
 
+
+	ps_type=g_type_from_name("emux51-port_selector");
 	/*	first call?	*/
 	if(ps_type == 0) {
 		const GTypeInfo ps_info =
@@ -89,7 +91,7 @@ GType port_selector_get_type(void)
 			(GInstanceInitFunc) port_selector_init,
 		};
 		ps_type=g_type_register_static(GTK_TYPE_VBOX,
-					"port_selector",
+					"emux51-port_selector",
 					&ps_info,0);
 	}
 	return ps_type;

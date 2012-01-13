@@ -65,8 +65,7 @@ directory:
 
 build:	${targets} gui alarm
 	@ echo 'linking..'
-	@ ${CC} ${BUILD} -L${OUTDIR} -lemux_widgets ${objects} ${LDFLAGS}  -o ${OUT}
-
+	@ ${CC} ${BUILD} -L${OUTDIR} ${objects} ${LDFLAGS}  -o ${OUT}
 
 ${targets}:
 	@ echo '${CC} src/$@.c'
