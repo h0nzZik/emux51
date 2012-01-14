@@ -333,7 +333,6 @@ static int module_load(char *path, module_t *mod)
 	if (p)
 		*p=gui_remove;
 
-	printf("ok...\n");
 	return 0;
 }
 

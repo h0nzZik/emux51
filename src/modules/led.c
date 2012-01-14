@@ -49,7 +49,6 @@ static void module_read(instance_t *self, int port)
 
 static void port_select(PortSelector *ps, instance_t *self)
 {
-	printf("selected\n");
 	self->port=port_selector_get_port(ps);
 
 	if (read_port(self, self->port, &self->port_data)) {
@@ -79,7 +78,7 @@ int module_init(instance_t *self)
 
 
 
-//	self->invert=1;
+	self->invert=1;
 
 
 	/*	create main box with port selector..	*/
@@ -90,6 +89,7 @@ int module_init(instance_t *self)
 			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(vbox), select, FALSE, FALSE, 0);
 
+	/*	randomize colors	*/
 	i=rand()%3;
 	c[(i+0)%3]=(rand()%0x100)/(double)0x100;
 	if (c[(i+0)%3]<0.7)
