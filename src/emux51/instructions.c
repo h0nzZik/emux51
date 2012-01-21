@@ -518,7 +518,7 @@ void jnc(unsigned short idx)
 /****************************************************************/
 void ljmp(unsigned short idx)
 {
-	PC=(code_memory[idx+2]<<8)|(code_memory[idx+1]);
+	PC=(code_memory[idx+1]<<8)|(code_memory[idx+2]);
 }
 
 void ajmp(unsigned short idx)
