@@ -3,7 +3,6 @@
 
 #define MODULE_CNT 32
 #include <emux51.h>
-//#include <gui.h>
 
 #define M_INIT(x)		((int (*)(void *))x)
 #define M_EXIT(x)		((int(*)(void *, const char *))x)
@@ -22,29 +21,14 @@ typedef struct {
 
 
 typedef struct {
-//	modid_t id;
 	void *handle;
 	int id;
 	char mask[PORTS_CNT];
 	void *space;
 	module_info_t *info;
-//	emuf_t callbacks;
-//	modf_t f;
-
-//	void *window;
-//	const char *name;
-
 } module_t;
 
-/*	delta list type	*/
-typedef struct DLIST {
-	void (*f)(void *space, void *data);
-	unsigned dt;
-	int idx;
-	void *data;
-	struct DLIST *next;
-	
-} dlist_t;
+
 
 #ifdef BUILDING_MODULE
 int (*read_port)(void *space, int port, char *data)=NULL;
@@ -53,10 +37,23 @@ int (*write_port)(void *space, int port, char data)=NULL;
 int (*alloc_bits)(void *space, int port, char mask)=NULL;
 int (*free_bits)(void *space, int port, char mask)=NULL;
 
+/*
 int (*time_queue_add)(void *space, unsigned ms,
 			void (*f)(void *space, void *data), void *data)=NULL;
-int (*cycle_queue_add)(void *space, unsigned cycles,
+*/
+
+int *clock_counter=NULL;
+
+void * (*timer_event_alloc)(void *space, void (*f)(void *space, void *data), void *data)=NULL;
+
+void (*sync_timer_add)(void *event, unsigned ms)=NULL;
+
+int (*usec_timer_add)(void *space, unsigned useconds,
 			void (*f)(void *space, void *data), void *data)=NULL;
+
+void (*sync_timer_unlink)(void *entry)=NULL;
+void (*usec_timer_unlink)(void *entry)=NULL;
+
 void * (*gui_add)(void *object, void *delete_data, const char *title)=NULL;
 void (*gui_remove)(void *window);
 #else

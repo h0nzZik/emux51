@@ -98,11 +98,13 @@ GtkWidget *led_new(int radius, int space)
 	led_resize(self);
 	return GTK_WIDGET(self);
 }
-
 void led_set_active(GtkWidget *led, int active)
 {
 	Led *self=LED(led);
 
+	/*	TODO: check me	*/
+	if (self->active == active)
+		return;
 	self->active=active;
 	led_redraw(self);
 }

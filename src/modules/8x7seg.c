@@ -19,7 +19,7 @@ typedef struct {
 
 	GtkWidget *window;
 	GtkWidget *ssegs[8];
-	
+	void *event;
 } instance;
 
 
@@ -37,7 +37,7 @@ void off_handler(instance *self, void *data)
 				seven_seg_set_segments(self->ssegs[i], 0);
 		}
 	}
-	time_queue_add(self, 100, M_QUEUE(off_handler), NULL);
+	sync_timer_add(self->event, 40);
 }
 
 
@@ -107,7 +107,11 @@ int module_init(instance *self)
 		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 10);
 	}
 
-	time_queue_add(self, 200, M_QUEUE(off_handler), NULL);
+	self->event=timer_event_alloc(self, M_QUEUE(off_handler), NULL);
+	if (self->event == NULL) {
+		return 1;
+	}
+	sync_timer_add(self->event, 40);
 	
 	gtk_widget_show_all(hbox);
 	self->window=gui_add(hbox, self, "8x7seg panel");

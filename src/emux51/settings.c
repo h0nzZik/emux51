@@ -17,10 +17,11 @@
 #ifndef HOME_VAR
 	#define HOME_VAR "HOME"
 #endif
+#define STRLEN(s) (sizeof(s)/sizeof(s[0]))
 
 const char *known_vars[]={ "module_dir", "hex_dir", NULL };
 
-char _configfile[PATH_MAX+3+strlen(CFGNAME)+strlen(CFGDIR)];
+char _configfile[PATH_MAX+3+STRLEN(CFGNAME)+STRLEN(CFGDIR)];
 
 char *configfile(void)
 {

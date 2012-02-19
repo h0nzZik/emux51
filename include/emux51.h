@@ -105,6 +105,7 @@ extern unsigned char data_memory[DATA_LENGHT];
 extern unsigned short PC;
 
 unsigned long Fosc;
+long long cycle_counter;
 
 
 /*	data memory operations		*/
@@ -165,6 +166,6 @@ void alarm_handler(void);
 
 void stop(void);
 void start(void);
-void pause(void);
+void program_pause(void);
 
 #endif

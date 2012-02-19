@@ -1,8 +1,6 @@
 /*
  * emux51.c - A main source file of emux51 emulator.
  *
- * TODO: do some timers stuff.
- *	 rewrite 'do_int_requests'
  *
  */
 
@@ -52,8 +50,8 @@ unsigned char port_externals[PORTS_CNT];
 /*	P3 falling edge	*/
 unsigned char fall;
 /*	machine cycle counter	*/
-unsigned long counter=0;
-
+//unsigned long counter=0;
+long long cycle_counter=0;
 /*	oscilator frequency	*/
 unsigned long Fosc=12000000;
 
@@ -579,7 +577,7 @@ void do_every_instruction_stuff(int times)
 {
 
 	while (times){
-		counter++;
+//		counter++;
 		do_timers_stuff();
 		times--;
 	}
@@ -595,6 +593,7 @@ int do_few_instructions(int cycles)
 		do_every_instruction_stuff(decrement);
 		cycle_queue_perform(decrement);
 		cycles-=decrement;
+		cycle_counter += decrement;
 	}
 	return cycles;
 }
@@ -606,13 +605,11 @@ unsigned int remaining_sync_cycles;
 
 void alarm_handler(void)
 {
-
 	static int last=0;
 	int cnt;
 
 	if (g_atomic_int_get(&running) == 0)
 		return;
-
 	time_queue_perform();
 
 	gui_callback();
@@ -685,7 +682,7 @@ void stop(void)
 	do_reset();
 	export_all();
 }
-void pause(void)
+void program_pause(void)
 {
 	g_atomic_int_set(&running, 0);
 }

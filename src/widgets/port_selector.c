@@ -3,13 +3,13 @@
  */
 #include <gtk/gtk.h>
 #include <widgets/port_selector.h>
-
+/*
 enum {
 	SELECT_SIGNAL,
 	LAST_SIGNAL
 };
-
-static guint port_selector_signals[LAST_SIGNAL]={0};
+*/
+//static guint port_selector_signals[LAST_SIGNAL]={0};
 
 
 
@@ -24,8 +24,9 @@ static void port_selector_toggled(GtkWidget *button, PortSelector *ps)
 	for(i=0; i<4; i++) {
 		if (ps->buttons[i] == button) {
 			ps->port=i;
-			g_signal_emit(ps, port_selector_signals[SELECT_SIGNAL],
-					0);
+/*			g_signal_emit(ps, port_selector_signals[SELECT_SIGNAL],
+					0);*/
+			g_signal_emit_by_name(ps, "port-select");
 			return;
 		}
 	}
@@ -39,6 +40,7 @@ static void port_selector_init(PortSelector *ps)
 	char buff[20];
 	GSList *group;
 
+	//ps->port_select_signal=;
 	gtk_container_set_border_width(GTK_CONTAINER(ps), 3);
 	gtk_box_set_homogeneous(GTK_BOX(ps), 1);
 	group=NULL;
@@ -61,7 +63,7 @@ static void port_selector_init(PortSelector *ps)
 
 static void port_selector_class_init(PortSelectorClass *c)
 {
-	port_selector_signals[SELECT_SIGNAL]=
+	//port_selector_signals[SELECT_SIGNAL]=
 		g_signal_new (	"port-select",
 				G_TYPE_FROM_CLASS(c),
 				G_SIGNAL_RUN_FIRST | G_SIGNAL_ACTION,

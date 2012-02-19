@@ -19,7 +19,7 @@ typedef struct {
 	GtkWidget *window;
 	GtkWidget *ssegs[4];
 	int mask;
-	
+	void *event;
 } instance;
 
 
@@ -28,7 +28,6 @@ typedef struct {
 void off_handler(instance *self, void *data)
 {
 	int i;
-
 	for(i=0; i<4; i++){
 		if ((self->mask>>i)&1 && self->lighting_segments[i] && !self->history[i]){
 			self->lighting_segments[i]=0;
@@ -38,7 +37,7 @@ void off_handler(instance *self, void *data)
 			self->history[i]=0;	
 		}
 	}
-	time_queue_add(self, 40, M_QUEUE(off_handler), NULL);
+	sync_timer_add(self->event, 40);
 }
 
 
@@ -121,7 +120,11 @@ int module_init(instance *self)
 		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 10);
 	}
 
-	time_queue_add(self, 200, M_QUEUE(off_handler), NULL);
+	self->event=timer_event_alloc(self, M_QUEUE(off_handler), NULL);
+	if (self->event == NULL) {
+		return 1;
+	}
+	sync_timer_add(self->event, 40);
 	
 	gtk_widget_show_all(hbox);
 	self->window=gui_add(hbox, self, "4x7seg panel");

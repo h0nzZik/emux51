@@ -223,6 +223,7 @@ static void gui_mod_ld(void *data)
 	if (rval == GTK_RESPONSE_OK) {
 		fname=gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
 		newdir=gtk_file_chooser_get_current_folder(GTK_FILE_CHOOSER(dialog));
+		printf("going to create new module..\n");
 		if(module_new(fname)) {
 			printf("can't load module\n");
 		} 
@@ -278,7 +279,7 @@ static void set_frequency(unsigned long freq)
 	int state;
 	state=g_atomic_int_get(&running);
 	if (state)
-		pause();
+		program_pause();
 	Fosc=freq;
 	format_frequency(buff, Fosc);
 	gtk_label_set_text(GTK_LABEL(freq_label), buff);

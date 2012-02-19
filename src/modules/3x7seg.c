@@ -19,7 +19,7 @@ typedef struct {
 	GtkWidget *window;
 	GtkWidget *ssegs[3];
 	int mask;
-	
+	void *event;
 } instance;
 
 
@@ -28,7 +28,6 @@ typedef struct {
 void off_handler(instance *self, void *data)
 {
 	int i;
-
 	for(i=0; i<3; i++){
 		if ((self->mask>>i)&1 && self->lighting_segments[i] && !self->history[i]){
 			self->lighting_segments[i]=0;		
@@ -38,7 +37,7 @@ void off_handler(instance *self, void *data)
 			self->history[i]=0;	
 		}
 	}
-	time_queue_add(self, 40, M_QUEUE(off_handler), NULL);
+	sync_timer_add(self->event, 40);
 }
 
 
@@ -75,8 +74,11 @@ void import_segments(instance *self)
 
 void module_read(instance *self, int port)
 {
-	if (port != self->port_no)
+	if (port != self->port_no) {
+//		printf("to me nezajima\n");
 		return;
+	}
+	//printf("3x7 reading\n");
 	import_segments(self);
 }
 
@@ -84,8 +86,8 @@ void module_read(instance *self, int port)
 static void port_select(PortSelector *ps, instance *self)
 {
 	int i;
-
 	self->port_no=port_selector_get_port(ps);
+	printf("port select %d\n", self->port_no);
 	memset(self->lighting_segments, 0, sizeof(self->lighting_segments));
 
 	/*	it was turned off	*/
@@ -97,7 +99,7 @@ static void port_select(PortSelector *ps, instance *self)
 	import_segments(self);
 }
 
-void *module_init(instance *self)
+int module_init(instance *self)
 {
 	/*	init module	*/
 	int i;
@@ -121,7 +123,13 @@ void *module_init(instance *self)
 		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 10);
 	}
 
-	time_queue_add(self, 200, M_QUEUE(off_handler), NULL);
+//	time_queue_add(self, 200, M_QUEUE(off_handler), NULL);
+	/*	allocate timer event	*/
+	self->event=timer_event_alloc(self, M_QUEUE(off_handler), NULL);
+	if (self->event == NULL) {
+		return 1;
+	}
+	sync_timer_add(self->event, 40);
 	
 	gtk_widget_show_all(hbox);
 	self->window=gui_add(hbox, self, "3x7seg panel");
@@ -130,6 +138,8 @@ void *module_init(instance *self)
 int module_exit(instance *self, const char *str)
 {
 	printf("[3x7seg:%d]\texiting because of %s\n", self->id, str);
+	sync_timer_unlink(self->event);
+	g_free(self->event);
 	gui_remove(self->window);
 	return 0;
 }

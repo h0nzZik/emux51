@@ -44,9 +44,9 @@ endif
 
 archtarget=${arch}
 
-targets=instructions emux51 module hex settings ${archtarget} gui alarm
+targets=instructions emux51 module hex settings ${archtarget} gui alarm lists
 objects=${OBJ}/instructions.o ${OBJ}/emux51.o ${OBJ}/${archtarget}.o ${OBJ}/module.o \
-	${OBJ}/hex.o ${OBJ}/gui.o ${OBJ}/settings.o ${OBJ}/alarm.o
+	${OBJ}/hex.o ${OBJ}/gui.o ${OBJ}/settings.o ${OBJ}/alarm.o ${OBJ}/lists.o
 
 widgets=port_selector 7seg led
 widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o ${OBJ}/led.o
@@ -83,7 +83,7 @@ ${widgets}:
 	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
 
 
-modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod keyboard.mod
+modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod keyboard.mod hello.mod usec_timer_test.mod 5x7matrix.mod
 
 modules: ${modules}
 ${modules}:
