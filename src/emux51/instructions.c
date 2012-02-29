@@ -79,7 +79,7 @@ void mov_at_rx_imm8(unsigned short idx)
 
 	data=read_code(idx+1);
 	addr=read_register(read_code(idx)&0x01);
-	write_data(addr, data);
+	indirect_write_data(addr, data);
 	PC+=2;
 }
 void mov_at_rx_a(unsigned short idx)
@@ -87,7 +87,7 @@ void mov_at_rx_a(unsigned short idx)
 	unsigned short addr;
 
 	addr=read_register(read_code(idx)&0x01);
-	write_data(addr, read_Acc());
+	indirect_write_data(addr, read_Acc());
 	PC++;
 }
 void mov_at_rx_addr(unsigned short idx)
@@ -97,7 +97,7 @@ void mov_at_rx_addr(unsigned short idx)
 
 	src=read_code(idx+1);
 	dest=read_register(read_code(idx)&0x01);
-	write_data(dest, read_data(src));
+	indirect_write_data(dest, read_data(src));
 	PC+=2;
 }
 void mov_a_at_rx(unsigned short idx)
@@ -105,7 +105,7 @@ void mov_a_at_rx(unsigned short idx)
 	unsigned char addr;
 
 	addr=read_register(read_code(idx)&0x01);
-	write_Acc(read_data(addr));
+	write_Acc(indirect_read_data(addr));
 	PC++;
 }
 void mov_a_addr(unsigned short idx)
@@ -172,7 +172,7 @@ void mov_addr_at_rx(unsigned short idx)
 
 	dest=read_code(idx+1);
 	src=read_register(read_code(idx)&0x01);
-	write_data(dest, read_data(src));
+	write_data(dest, indirect_read_data(src));
 	PC+=2;
 }
 void mov_addr_addr(unsigned short idx)
@@ -243,9 +243,9 @@ void xch_a_at_rx(unsigned short idx)
 
 	addr=read_register(read_code(idx)&1);
 	adata=read_Acc();
-	rdata=read_data(addr);
+	rdata=indirect_read_data(addr);
 
-	write_data(addr, adata);
+	indirect_write_data(addr, adata);
 	write_Acc(rdata);
 	PC++;
 }
@@ -257,7 +257,7 @@ void xchd_a_at_rx(unsigned short idx)
 
 	addr=read_register(read_code(idx)&1);
 	adata=read_Acc();
-	rdata=read_data(addr);
+	rdata=indirect_read_data(addr);
 
 	adata&=0xF0;
 	adata|=rdata&0x0F;
@@ -265,7 +265,7 @@ void xchd_a_at_rx(unsigned short idx)
 	rdata|=read_Acc()&0x0F;
 
 
-	write_data(addr, rdata);
+	indirect_write_data(addr, rdata);
 	write_Acc(adata);
 	PC++;
 }
@@ -355,7 +355,7 @@ void cjne_at_rx_imm8_addr(unsigned short idx)
 	unsigned char data;
 	unsigned char rdata;
 
-	rdata=read_data(read_register(read_code(idx)&0x01));
+	rdata=indirect_read_data(read_register(read_code(idx)&0x01));
 	data=read_code(idx+1);
 	inc=read_code(idx+2);
 	PC+=3;
@@ -553,16 +553,16 @@ void acall(unsigned short idx)
 void lcall(unsigned short idx)
 {
 	/*	push return adress onto stack, little-endian	*/
-	push((PC+2)&0x00FF);
-	push((PC+2)>>8);
+	push((PC+3)&0x00FF);
+	push((PC+3)>>8);
 
-	PC=(code_memory[idx+2]<<8)|(code_memory[idx+1]);
+	PC=(code_memory[idx+2])|(code_memory[idx+1]<<8);
 }
 
 void ret(unsigned short idx)
 {
-	PC=(data_memory[data_memory[SP]]<<8)|(data_memory[data_memory[SP]-1]);
-	data_memory[SP]-=2;
+	PC=(data_memory[sfr_memory[SP]]<<8)|(data_memory[sfr_memory[SP]-1]);
+	sfr_memory[SP]-=2;
 }
 
 void reti(unsigned short idx)
@@ -631,7 +631,7 @@ void add_a_at_rx(unsigned short idx)
 	unsigned char increment;
 	int c;
 
-	increment=read_data(read_register(read_code(idx)&0x01));
+	increment=indirect_read_data(read_register(read_code(idx)&0x01));
 	c=read_code(idx)&0x10;
 	if (c)
 		increment+=test_bit(CARRY);
@@ -683,7 +683,7 @@ void subb_a_at_rx(unsigned short idx)
 {
 	unsigned char decrement;
 
-	decrement=read_data(read_register(read_code(idx)&0x01));
+	decrement=indirect_read_data(read_register(read_code(idx)&0x01));
 	decrement+=test_bit(CARRY);
 	sub_Acc(decrement);
 	PC++;
@@ -708,9 +708,9 @@ void inc_at_rx(unsigned short idx)
 	unsigned char data;
 
 	addr=read_register(read_code(idx)&0x01);
-	data=read_data(addr);
+	data=indirect_read_data(addr);
 	data++;
-	write_data(addr, data);
+	indirect_write_data(addr, data);
 	PC++;
 }
 void inc_a(unsigned short idx)
@@ -762,9 +762,9 @@ void dec_at_rx(unsigned short idx)
 	unsigned char data;
 
 	addr=read_register(read_code(idx)&0x01);
-	data=read_data(addr);
+	data=indirect_read_data(addr);
 	data--;
-	write_data(addr, data);
+	indirect_write_data(addr, data);
 	PC++;
 }
 void dec_a(unsigned short idx)
@@ -827,7 +827,7 @@ void anl_a_at_rx(unsigned short idx)
 	unsigned char mask;
 	unsigned char acc;
 
-	mask=read_data(read_register(read_code(idx)&0x01));
+	mask=indirect_read_data(read_register(read_code(idx)&0x01));
 	acc=read_Acc();
 	acc&=mask;
 	write_Acc(acc);
@@ -936,7 +936,7 @@ void orl_a_at_rx(unsigned short idx)
 	unsigned char data;
 
 	a=read_Acc();
-	data=read_data(read_register(read_code(idx)&0x01));
+	data=indirect_read_data(read_register(read_code(idx)&0x01));
 	a|=data;
 	write_Acc(a);
 	PC++;
@@ -1030,7 +1030,7 @@ void xrl_a_at_rx(unsigned short idx)
 	unsigned char data;
 
 	a=read_Acc();
-	data=read_data(read_register(read_code(idx)&0x01));
+	data=indirect_read_data(read_register(read_code(idx)&0x01));
 	a^=data;
 	write_Acc(a);
 	PC++;

@@ -308,6 +308,23 @@ int module_new(char *path)
 	return 0;
 }
 
+void module_dump_all(void)
+{
+	int i;
+	for (i=0; i<MODULE_CNT; i++) {
+		if (modules[i].space) {
+			printf("module id %d @ %p\n", i, modules[i].space);
+			printf("\t->info\t%p\n", modules[i].info);
+			printf("\t\t->port_changed\t%p\n", modules[i].info->port_changed);
+
+
+			printf("...\n");
+		}
+	}
+
+}
+
+
 int module_destroy(void *instance, const char *reason)
 {
 	module_t *mod;
@@ -353,21 +370,6 @@ int module_destroy(void *instance, const char *reason)
 }
 
 
-void module_dump_all(void)
-{
-	int i;
-	for (i=0; i<MODULE_CNT; i++) {
-		if (modules[i].space) {
-			printf("module id %d @ %p\n", i, modules[i].space);
-			printf("\t->info\t%p\n", modules[i].info);
-			printf("\t\t->port_changed\t%p\n", modules[i].info->port_changed);
-
-
-			printf("...\n");
-		}
-	}
-
-}
 
 void module_destroy_all(const char *reason)
 {

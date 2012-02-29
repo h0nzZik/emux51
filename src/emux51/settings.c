@@ -41,7 +41,7 @@ int config_parse(void)
 	int len;
 	FILE *fr;
 
-	fr=fopen(configfile(), "rt");
+	fr=g_fopen(configfile(), "rt");
 	if (fr == NULL)
 		return -1;
 
@@ -78,7 +78,7 @@ int config_save(void)
 	FILE *fw;
 
 	/*	open file	*/
-	fw=fopen(configfile(), "wt");
+	fw=g_fopen(configfile(), "wt");
 	if (fw == NULL){
 		printf("[emux]\tcan't save config to file %s\n", configfile());
 		return -1;

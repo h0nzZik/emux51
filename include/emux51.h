@@ -102,6 +102,7 @@ extern int interrupt_state;
 
 extern unsigned char code_memory[CODE_LENGHT];
 extern unsigned char data_memory[DATA_LENGHT];
+extern unsigned char sfr_memory[DATA_LENGHT];
 extern unsigned short PC;
 
 unsigned long Fosc;
@@ -141,9 +142,6 @@ unsigned char pop(void);
 
 void jump_to(unsigned char addr);
 
-
-/*	returns adresses of port 'port'	*/
-/*	int port(int port);*/
 
 
 void do_reset(void);

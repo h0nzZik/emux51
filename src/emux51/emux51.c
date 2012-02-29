@@ -38,6 +38,7 @@ char hexfile[PATH_MAX];
 unsigned char code_memory[CODE_LENGHT];
 /*	256B data memory	*/
 unsigned char data_memory[DATA_LENGHT];
+unsigned char sfr_memory[DATA_LENGHT];
 /*	2B program counter	*/
 unsigned short PC;
 /*	port latch register	*/
@@ -94,7 +95,7 @@ void update_port(int port)
 	unsigned char old=port_collectors[port];
 
 	port_collectors[port]=port_latches[port]&port_externals[port];
-	data_memory[port_to_addr(port)]=port_collectors[port];
+	sfr_memory[port_to_addr(port)]=port_collectors[port];
 
 	/*		*/
 	if (port == 3) {
@@ -112,7 +113,10 @@ void update_port(int port)
 
 unsigned char read_data(unsigned addr)
 {
-	return(data_memory[addr]);
+	if (addr < 0x80)
+		return(data_memory[addr]);
+	else
+		return(sfr_memory[addr]);
 	
 }
 
@@ -121,22 +125,30 @@ void write_data(unsigned addr, char data)
 	int port;
 
 
-	if(isport(addr)){
+	if (addr < 0x80) {
+		data_memory[addr]=data;
+
+	} else if (isport(addr)){
 		port=addr_to_port(addr);
 		port_latches[port]=data;
 		update_port(port);
 	} else {
-		data_memory[addr]=data;
+		sfr_memory[addr]=data;
 	}
 }
+
+unsigned char indirect_read_data(unsigned addr)
+{
+	return (data_memory[addr]);
+}
+void indirect_write_data(unsigned addr, char data)
+{
+	data_memory[addr]=data;
+}
+
 unsigned char read_code(unsigned addr)
 {
 	return(code_memory[addr]);
-}
-
-void write_code(unsigned addr, char data)
-{
-	code_memory[addr]=data;
 }
 
 
@@ -144,7 +156,7 @@ unsigned reg_to_addr(int reg)
 {
 	unsigned base;
 
-	base=data_memory[PSW]&0x18;
+	base=sfr_memory[PSW]&0x18;
 	return(base|(reg&0x07));
 }
 
@@ -164,12 +176,12 @@ void write_register(int reg, char data)
 
 unsigned char read_Acc(void)
 {
-	return(data_memory[Acc]);
+	return(sfr_memory[Acc]);
 }
 
 void write_Acc(char data)
 {
-	data_memory[Acc]=data;
+	sfr_memory[Acc]=data;
 }
 void add_Acc(unsigned char increment)
 {
@@ -230,8 +242,8 @@ void set_bit(unsigned char bit_addr)
 
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
-	else
-		data=data_memory[byte];
+	else 
+		data=read_data(byte);
 	data|=1<<bit;
 	write_data(byte, data);
 
@@ -249,7 +261,7 @@ void clr_bit(unsigned char bit_addr)
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
 	else
-		data=data_memory[byte];
+		data=read_data(byte);
 	data&=~(1<<bit);
 	write_data(byte, data);
 }
@@ -275,7 +287,7 @@ void neg_bit(unsigned char bit_addr)
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
 	else
-		data=data_memory[byte];
+		data=read_data(byte);
 	data^=1<<bit;
 	write_data(byte, data);
 
@@ -289,7 +301,7 @@ int test_bit(unsigned char bit_addr)
 
 	byte=addr_to_bit_byte(bit_addr);
 	bit=addr_to_bit_bit(bit_addr);
-	return(data_memory[byte]&(1<<bit)?1:0);
+	return(read_data(byte)&(1<<bit)?1:0);
 }
 
 /*	</API for instructions>	*/
@@ -297,15 +309,18 @@ int test_bit(unsigned char bit_addr)
 void do_reset(void)
 {
 	memset (data_memory, 0, DATA_LENGHT);
+	memset (sfr_memory, 0, DATA_LENGHT);
 	memset (port_latches, 0xFF, 4);
 	memset (port_collectors, 0xFF, 4);
 	memset (port_externals, 0xFF, 4);
-	data_memory[SP]=7;
 
-	data_memory[0x80]=0xFF;
-	data_memory[0x90]=0xFF;
-	data_memory[0xA0]=0xFF;
-	data_memory[0xB0]=0xFF;
+	sfr_memory[SP]=7;
+
+
+	sfr_memory[0x80]=0xFF;
+	sfr_memory[0x90]=0xFF;
+	sfr_memory[0xA0]=0xFF;
+	sfr_memory[0xB0]=0xFF;
 
 	PC=0;
 }
@@ -323,16 +338,16 @@ void init_machine(void)
 
 int timer_0_mode(void)
 {
-	return (data_memory[TMOD]&0x03);
+	return (sfr_memory[TMOD]&0x03);
 }
 
 int timer_1_mode(void)
 {
-	return ((data_memory[TMOD]>>4)&0x03);
+	return ((sfr_memory[TMOD]>>4)&0x03);
 }
 int timer_0_event(void)
 {
-	if ((data_memory[TMOD]&0x04) == 0)
+	if ((sfr_memory[TMOD]&0x04) == 0)
 		return 1;
 	if ((fall&0x10) == 1)
 		return 1;
@@ -341,7 +356,7 @@ int timer_0_event(void)
 
 int timer_1_event(void)
 {
-	if ((data_memory[TMOD]&0x40) == 0)
+	if ((sfr_memory[TMOD]&0x40) == 0)
 		return 1;
 	if ((fall&0x20) == 1)
 		return 1;
@@ -350,11 +365,11 @@ int timer_1_event(void)
 int timer_0_running(void)
 {
 	/*	TR0 is not set	*/
-	if ((data_memory[TCON]&0x10) == 0)
+	if ((sfr_memory[TCON]&0x10) == 0)
 		return 0;
-	if ((data_memory[TMOD]&0x08) == 0)
+	if ((sfr_memory[TMOD]&0x08) == 0)
 		return 1;
-	if ((data_memory[port_to_addr(3)]&0x04) == 1)
+	if ((sfr_memory[port_to_addr(3)]&0x04) == 1)
 		return 1;
 	return 0;
 }
@@ -362,14 +377,14 @@ int timer_0_running(void)
 int timer_1_running(void)
 {
 	/*	TR1 is not set	*/
-	if ((data_memory[TCON]&0x40) == 0)
+	if ((sfr_memory[TCON]&0x40) == 0)
 		return 0;
 	/*	timer 1 cannot run in mode 3	*/
 	if (timer_1_mode() == 3)
 		return 0;
-	if ((data_memory[TMOD]&0x80) == 0)
+	if ((sfr_memory[TMOD]&0x80) == 0)
 		return 1;
-	if ((data_memory[port_to_addr(3)]&0x08) == 1)
+	if ((sfr_memory[port_to_addr(3)]&0x08) == 1)
 		return 1;
 	return 0;
 }
@@ -382,25 +397,25 @@ int timer_1_running(void)
 static void update_timer_0(void)
 {
 
-	data_memory[TL0]++;
+	sfr_memory[TL0]++;
 	if(timer_0_mode() == 0)
-		data_memory[TL0]&=0x1f;
+		sfr_memory[TL0]&=0x1f;
 /*	increment TH0 if 8b mode or overflow	*/
-	if ((timer_0_mode() > 2) || (data_memory[TL0] == 0)) {
-		data_memory[TH0]++;
+	if ((timer_0_mode() > 2) || (sfr_memory[TL0] == 0)) {
+		sfr_memory[TH0]++;
 	}
 /*		overflow test - TODO:		*/
 	switch(timer_0_mode()) {
 		case 0:
 		case 1:
-		if ((data_memory[TH0] == 0) && (data_memory[TL0] == 0)){
+		if ((sfr_memory[TH0] == 0) && (sfr_memory[TL0] == 0)){
 			neg_bit(TF0);
 		}
 		break;
 		case 2:
-		if (data_memory[TL0] == 0) {
+		if (sfr_memory[TL0] == 0) {
 			neg_bit(TF0);
-			data_memory[TL0]=data_memory[TH0];
+			sfr_memory[TL0]=sfr_memory[TH0];
 		}
 		break;
 
@@ -412,25 +427,25 @@ static void update_timer_0(void)
 static void update_timer_1(void)
 {
 
-	data_memory[TL1]++;
+	sfr_memory[TL1]++;
 	if(timer_1_mode() == 0)
-		data_memory[TL1]&=0x1f;
+		sfr_memory[TL1]&=0x1f;
 /*	increment TH0 if 8b mode or overflow	*/
-	if ((timer_1_mode() & 2) || (data_memory[TL1] == 0)) {
-		data_memory[TH1]++;
+	if ((timer_1_mode() & 2) || (sfr_memory[TL1] == 0)) {
+		sfr_memory[TH1]++;
 	}
 /*		overflow test - TODO:		*/
 	switch(timer_1_mode()) {
 		case 0:
 		case 1:
-		if ((data_memory[TH1] == 0) && (data_memory[TL1] == 0)){
+		if ((sfr_memory[TH1] == 0) && (sfr_memory[TL1] == 0)){
 			neg_bit(TF1);
 		}
 		break;
 		case 2:
-		if (data_memory[TL1] == 0) {
+		if (sfr_memory[TL1] == 0) {
 			neg_bit(TF1);
-			data_memory[TL1]=data_memory[TH1];
+			sfr_memory[TL1]=sfr_memory[TH1];
 		}
 		break;
 
@@ -451,14 +466,14 @@ static void do_timers_stuff(void)
 
 void push(unsigned char data)
 {
-	data_memory[SP]++;
-	data_memory[data_memory[SP]]=data;
+	sfr_memory[SP]++;
+	data_memory[sfr_memory[SP]]=data;
 }
 unsigned char pop(void)
 {
 	unsigned char data;
-	data=data_memory[data_memory[SP]];
-	data_memory[SP]--;
+	data=data_memory[sfr_memory[SP]];
+	sfr_memory[SP]--;
 	return(data);
 }
 
@@ -654,8 +669,13 @@ void data_dump(char *buffer)
 }
 int main(int argc, char *argv[])
 {
-
+//	int option;
 	printf("[emux]\tstarting..\n");
+	
+	/*	arguments	*/
+	
+	
+	
 	srand(time(NULL));
 	config_parse();
 	signal(SIGINT, sigint_handler);
