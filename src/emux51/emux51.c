@@ -627,7 +627,7 @@ void alarm_handler(void)
 		return;
 	time_queue_perform();
 
-	gui_callback();
+//	gui_callback();
 	cnt=remaining_machine_cycles/remaining_sync_cycles;
 	last=do_few_instructions(cnt+last);
 	remaining_machine_cycles-=cnt;
@@ -637,6 +637,7 @@ void alarm_handler(void)
 		remaining_machine_cycles=Fosc;
 		remaining_sync_cycles=12*SYNC_FREQ;
 	}
+	gui_callback();
 }
 
 void sigint_handler(int data)
