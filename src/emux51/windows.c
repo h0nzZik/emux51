@@ -33,30 +33,7 @@ int setup_timer(float freq, void (*callback)(void))
 	return 0;
 
 }
-
-
-
-void *load_lib(const char *path)
-{
-	HMODULE lib;
-	lib=LoadLibrary(path);
-	return lib;
-}
-
-void *load_sym(void *lib, const char *name)
-{
-	FARPROC sym;
-	sym=GetProcAddress(lib, name);	
-	return sym;
-}
-
-void close_lib(void *lib)
-{
-	FreeLibrary(lib);	
-}
-
 int arch_create_pipe(int pipefd[2])
 {
 	return(_pipe(pipefd, 256, O_TEXT));
 }
-

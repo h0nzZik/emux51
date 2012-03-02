@@ -33,7 +33,7 @@ int setup_timer(float freq, void (*callback)(void))
 	return 0;	
 }
 
-
+#if 0
 void *load_lib(const char *path)
 {
 	void *lib;
@@ -52,6 +52,7 @@ void close_lib(void *lib)
 {
 	dlclose(lib);	
 }
+#endif
 
 int arch_create_pipe(int pipefd[2])
 {

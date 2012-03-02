@@ -3,6 +3,7 @@
 
 #define MODULE_CNT 32
 #include <emux51.h>
+#include <gmodule.h>
 
 #define M_INIT(x)		((int (*)(void *))x)
 #define M_EXIT(x)		((int(*)(void *, const char *))x)
@@ -21,7 +22,9 @@ typedef struct {
 
 
 typedef struct {
-	void *handle;
+//	void *handle;
+
+	GModule *module;
 	int id;
 	char mask[PORTS_CNT];
 	void *space;

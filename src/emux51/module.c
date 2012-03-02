@@ -15,6 +15,8 @@
 #include <arch.h>
 #include <lists.h>
 
+#include <gmodule.h>
+
 /*	delta list variables	*/
 dlist_t *inst_queue=NULL;
 dlist_t *time_queue=NULL;
@@ -157,12 +159,10 @@ void do_sync_timer_add(void *new, unsigned ms)
 
 void cycle_queue_perform(int steps)
 {
-//	inst_queue=dlist_perform(inst_queue, steps);
 	dlist_perform(&inst_queue, steps);
 }
 void time_queue_perform(void)
 {
-//	time_queue=dlist_perform(time_queue, 1);
 	dlist_perform(&time_queue, 1);
 }
 
@@ -188,10 +188,9 @@ void module_export_port(int port)
 	module_t *mod;
 	for(i=0; i<MODULE_CNT; i++) {
 		mod=&modules[i];
-		if (mod->handle && mod->info->port_changed){
-//			printf("exporting to %d\n", i);
+		if (mod->module && mod->info->port_changed){
 			mod->info->port_changed(mod->space, port);
-		}
+		}	
 	}
 }
 
@@ -202,75 +201,67 @@ static int module_load(char *path, module_t *mod)
 	void **p;
 
 	memset(mod, 0, sizeof(module_t));
-	mod->handle=load_lib(path);
-	if (mod->handle == NULL) {
+
+	mod->module=g_module_open(path, G_MODULE_BIND_LAZY | G_MODULE_BIND_LOCAL);
+
+	if (mod->module == NULL) {
 		fprintf(stderr, "[emux]\tcannot open file %s\n", path);
 		return (-1);
 	}
-	info=load_sym(mod->handle, "module_info");
 
-	if(info == NULL) {
+	if (g_module_symbol(mod->module, "module_info",(gpointer *)&info) == FALSE
+		|| info == NULL) {
+		
 		fprintf(stderr, "[emux]\t%s is bad module\n", path);
-		close_lib(mod->handle);
+
+		g_module_close(mod->module);
 		return -2;		
 	}
 
-//	printf("loaded module: \"%s\"\n"
-//		"\tspace size:\t%d\n"
-//		"\tinit function:\t%p\n"
-//		"\texit function:\t%p\n"
-//		"\tport change function:\t%p\n",
-//		info->name, info->space_size, info->init,
-//		info->exit, info->port_changed);	
+	printf("loaded module: \"%s\"\n"
+		"\tspace size:\t%d\n"
+		"\tinit function:\t%p\n"
+		"\texit function:\t%p\n"
+		"\tport change function:\t%p\n",
+		info->name, info->space_size, info->init,
+		info->exit, info->port_changed);	
 	
 	mod->info=info;
 
-	p=load_sym(mod->handle, "read_port");
-	if (p)
+	if (g_module_symbol(mod->module,"read_port",(gpointer *)&p) == TRUE)
 		*p=do_read_port;
 
-	p=load_sym(mod->handle, "write_port");
-	if (p)
+	if (g_module_symbol(mod->module,"write_port",(gpointer *)&p) == TRUE)
 		*p=do_write_port;
 
-	p=load_sym(mod->handle, "alloc_bits");
-	if (p)
+	if (g_module_symbol(mod->module,"alloc_bits",(gpointer *)&p) == TRUE)
 		*p=do_alloc_bits;
 
-	p=load_sym(mod->handle, "free_bits");
-	if (p)
+	if (g_module_symbol(mod->module,"free_bits",(gpointer *)&p) == TRUE)
 		*p=do_free_bits;
 
-	p=load_sym(mod->handle, "sync_timer_add");
-	if (p)
-		*p=do_sync_timer_add;
-
-	p=load_sym(mod->handle, "timer_event_alloc");
-	if (p)
+	if (g_module_symbol(mod->module,"timer_event_alloc",(gpointer *)&p) == TRUE)
 		*p=do_timer_event_alloc;
 
-	p=load_sym(mod->handle, "usec_timer_add");
-	if (p)
+	if (g_module_symbol(mod->module,"sync_timer_add",(gpointer *)&p) == TRUE)
+		*p=do_sync_timer_add;
+
+	if (g_module_symbol(mod->module,"usec_timer_add",(gpointer *)&p) == TRUE)
 		*p=do_usec_timer_add;
 
-	p=load_sym(mod->handle, "gui_add");
-	if (p)
+	if (g_module_symbol(mod->module,"gui_add",(gpointer *)&p) == TRUE)
 		*p=do_gui_add;
 
-	p=load_sym(mod->handle, "gui_remove");
-	if (p)
+	if (g_module_symbol(mod->module,"gui_remove",(gpointer *)&p) == TRUE)
 		*p=do_gui_remove;
 
-	p=load_sym(mod->handle, "clock_counter");
-	if (p)
+	if (g_module_symbol(mod->module,"clock_counter",(gpointer *)&p) == TRUE)
 		*p=&cycle_counter;
 
-	p=load_sym(mod->handle, "sync_timer_unlink");
-	if (p)
+	if (g_module_symbol(mod->module,"sync_timer_unlink",(gpointer *)&p) == TRUE)
 		*p=do_sync_timer_unlink;
 
-	p=load_sym(mod->handle, "usec_timer_unlink");
-	if (p)
+	if (g_module_symbol(mod->module,"usec_timer_unlink",(gpointer *)&p) == TRUE)
 		*p=do_usec_timer_unlink;
 
 	return 0;
@@ -287,7 +278,7 @@ int module_new(char *path)
 	}
 
 	for(i=0; i<MODULE_CNT; i++) {
-		if (modules[i].handle == NULL) {
+		if (modules[i].module == NULL) {
 			mod=&modules[i];
 			break;
 		}
@@ -362,7 +353,9 @@ int module_destroy(void *instance, const char *reason)
 
 	mod->info->port_changed=tmp;
 
-	close_lib(mod->handle);
+	g_module_close(mod->module);
+
+
 	memset(mod, 0, sizeof(module_t));	
 
 	printf("[emux]\tmodule killed.\n");
@@ -377,8 +370,7 @@ void module_destroy_all(const char *reason)
 	int i;
 
 	for (i=0; i<MODULE_CNT; i++) {
-		if (modules[i].handle){
-			//printf("[emux51]destroying %d\n", i);
+		if (modules[i].module){
 			module_destroy(modules[i].space, reason);
 		}
 	}
@@ -396,4 +388,4 @@ int modules_init(void)
 }
 
 
-/*			</emulator API>				*/
+
