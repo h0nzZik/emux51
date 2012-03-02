@@ -97,7 +97,7 @@ extern int exporting;
 extern volatile gint G_GNUC_MAY_ALIAS running;
 
 extern int loaded;
-extern char hexfile[];
+//extern char hexfile[];
 extern int interrupt_state;
 
 extern unsigned char code_memory[CODE_LENGHT];
@@ -112,6 +112,9 @@ long long cycle_counter;
 /*	data memory operations		*/
 unsigned char read_data (unsigned addr);
 void write_data(unsigned addr, char data);
+
+unsigned char indirect_read_data(unsigned addr);
+void indirect_write_data(unsigned addr, char data);
 
 /*	operations with registers r0-r7	*/
 inline unsigned char read_register(int reg);
@@ -145,7 +148,7 @@ void jump_to(unsigned char addr);
 
 
 void do_reset(void);
-void data_dump(char *buffer);
+//void data_dump(char *buffer);
 
 /*	64K  code memory		*/
 extern unsigned char code_memory[];
@@ -162,8 +165,8 @@ void update_port(int port);
 void alarm_handler(void);
 
 
-void stop(void);
-void start(void);
+void program_stop(void);
+void program_start(void);
 void program_pause(void);
 
 #endif

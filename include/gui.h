@@ -8,8 +8,8 @@
 int gui_run(int *argc, char **argv[]);
 int gui_destroy(void);
 
-void * gui_add(void *object, void *module, const char *title);
-void gui_remove(void *window);
+void * do_gui_add(void *object, void *module, const char *title);
+void do_gui_remove(void *window);
 
 
 void refresh_dump(void);

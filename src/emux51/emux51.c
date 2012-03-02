@@ -32,7 +32,7 @@ volatile gint G_GNUC_MAY_ALIAS running;
 
 int loaded=0;
 int interrupt_state=0;
-char hexfile[PATH_MAX];
+//char hexfile[PATH_MAX];
 
 /*	64K  code memory		*/
 unsigned char code_memory[CODE_LENGHT];
@@ -646,7 +646,7 @@ void sigint_handler(int data)
 }
 
 
-
+#if 0
 char *dump_head="--\t00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0A\t0B\t0C\t0D\t0E\t0F\n";
 
 void data_dump(char *buffer)
@@ -667,6 +667,7 @@ void data_dump(char *buffer)
 	}
 
 }
+#endif
 int main(int argc, char *argv[])
 {
 //	int option;
@@ -690,13 +691,13 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void start(void)
+void program_start(void)
 {
 	remaining_machine_cycles=Fosc;
 	remaining_sync_cycles=12*SYNC_FREQ;
 	g_atomic_int_set(&running, 1);
 }
-void stop(void)
+void program_stop(void)
 {
 	g_atomic_int_set(&running, 0);
 	do_reset();

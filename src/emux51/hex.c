@@ -3,6 +3,7 @@
  */
 #include <stdio.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 #include <hex.h>
 
 int load_hex(const char *file, unsigned char *dest, unsigned int dest_len)

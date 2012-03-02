@@ -1,12 +1,13 @@
 # Makefile for linux and linux to windows cross-compiling
 #TODO: -D GTK_DISABLE_DEPRECATED
 GTK_NEW_FLAGS=-D GTK_DISABLE_SINGLE_INCLUDES -DGDK_DISABLE_DEPRECATED 
-CFLAGS=-c -Wall -O2 -Wformat `${PKG-CONFIG} --cflags gtk+-2.0 glib-2.0` ${GTK_NEW_FLAGS}
+CFLAGS=-c -Wall -O2 -Wformat `${PKG-CONFIG} --cflags gtk+-2.0 glib-2.0` ${GTK_NEW_FLAGS} -ggdb3
 INCLUDE=-I include
 GTK_LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0`
 
 ifeq (${arch}, windows)
-	PKG-CONFIG=mingw32-pkg-config
+#	PKG-CONFIG=mingw32-pkg-config
+	PKG-CONFIG=i686-pc-mingw32-pkg-config
 	CC=i686-pc-mingw32-gcc
 ifndef (${OUTDIR})
 	OUTDIR=out/windows
@@ -16,7 +17,8 @@ ifeq (${debug},1)
 	LDFLAGS=${GTK_LDFLAGS} -lwinmm 
 	OUT=${OUTDIR}/emux51-con.exe
 else
-	LDFLAGS=${GTK_LDFLAGS} -lwinmm -mwindows
+	LDFLAGS=${GTK_LDFLAGS} -lwinmm
+	#-mwindows
 	OUT=${OUTDIR}/emux51.exe
 endif
 	DEX=.dll
@@ -25,7 +27,8 @@ endif
 else
 	PKG-CONFIG=pkg-config
 	arch=nixies
-	LDFLAGS=${GTK_LDFLAGS}
+	LDFLAGS=${GTK_LDFLAGS} -export-dynamic
+#	LDFLAGS=${GTK_LDFLAGS} --dynamic-list=symbols_to_export
 ifndef (${OUTDIR})
 	OUTDIR=out/nixies
 endif

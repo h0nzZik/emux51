@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <glib.h>
+#include <glib/gstdio.h>
 
 
 #define CFGNAME "emuxrc"

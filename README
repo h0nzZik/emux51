@@ -10,8 +10,8 @@
 *	Standard GNU/Linux distributions.
 *	Standard Windows
 
-		Dependencies:
-*	GTK+, cairo, glibc
+		Requires:
+*	GTK+ >= 2.24
 
 
 
@@ -20,7 +20,6 @@
 *	Interrupts				[= done  =]
 *	Configuration				[= basic =]
 *	Timers					[= check =]
-*	WIN32 support				[= done  =]
 *
 *	Implemented modules:
 *	* Leds

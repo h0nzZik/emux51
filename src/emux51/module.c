@@ -47,7 +47,7 @@ int get_id(void *space)
 
 
 
-int alloc_bits(void *space, int port, char mask)
+int do_alloc_bits(void *space, int port, char mask)
 {
 	int id;
 	id=get_id(space);
@@ -68,7 +68,7 @@ int alloc_bits(void *space, int port, char mask)
 }
 
 
-int free_bits(void *space, int port, char mask)
+int do_free_bits(void *space, int port, char mask)
 {
 	int id;
 
@@ -90,7 +90,7 @@ int free_bits(void *space, int port, char mask)
 }
 
 
-int write_port(void *space, int port, char data)
+int do_write_port(void *space, int port, char data)
 {
 	char new;
 	int id;
@@ -112,7 +112,7 @@ int write_port(void *space, int port, char data)
 	return 0;
 }
 
-int read_port(void *space, int port, char *data)
+int do_read_port(void *space, int port, char *data)
 {
 	int id;
 	id=get_id(space);
@@ -126,7 +126,7 @@ int read_port(void *space, int port, char *data)
 }
 
 
-void * timer_event_alloc(void *space, void (*f)(void *space, void *data), void *data)
+void * do_timer_event_alloc(void *space, void (*f)(void *space, void *data), void *data)
 {
 	if(get_id(space)<0) {
 		fprintf(stderr, "[emux51]\tBad module ID\n");
@@ -138,7 +138,7 @@ void * timer_event_alloc(void *space, void (*f)(void *space, void *data), void *
 }
 
 
-void usec_timer_add(void *new, unsigned useconds)
+void do_usec_timer_add(void *new, unsigned useconds)
 {
 	unsigned cycles;
 
@@ -146,7 +146,7 @@ void usec_timer_add(void *new, unsigned useconds)
 	inst_queue=dlist_link(inst_queue, new, cycles);
 }
 
-void sync_timer_add(void *new, unsigned ms)
+void do_sync_timer_add(void *new, unsigned ms)
 {
 	unsigned cycles;
 
@@ -167,12 +167,12 @@ void time_queue_perform(void)
 }
 
 
-void sync_timer_unlink(void *entry)
+void do_sync_timer_unlink(void *entry)
 {
 	dlist_unlink(&time_queue, entry);
 }
 
-void usec_timer_unlink(void *entry)
+void do_usec_timer_unlink(void *entry)
 {
 	dlist_unlink(&inst_queue, entry);
 }
@@ -215,46 +215,51 @@ static int module_load(char *path, module_t *mod)
 		return -2;		
 	}
 
-	printf("loaded module: \"%s\"\n\tspace size:\t%d\n\tinit function:\t%p\n\texit function:\t%p\n\tport change function:\t%p\n",
-		info->name, info->space_size, info->init, info->exit, info->port_changed);	
+//	printf("loaded module: \"%s\"\n"
+//		"\tspace size:\t%d\n"
+//		"\tinit function:\t%p\n"
+//		"\texit function:\t%p\n"
+//		"\tport change function:\t%p\n",
+//		info->name, info->space_size, info->init,
+//		info->exit, info->port_changed);	
 	
 	mod->info=info;
 
 	p=load_sym(mod->handle, "read_port");
 	if (p)
-		*p=read_port;
+		*p=do_read_port;
 
 	p=load_sym(mod->handle, "write_port");
 	if (p)
-		*p=write_port;
+		*p=do_write_port;
 
 	p=load_sym(mod->handle, "alloc_bits");
 	if (p)
-		*p=alloc_bits;
+		*p=do_alloc_bits;
 
 	p=load_sym(mod->handle, "free_bits");
 	if (p)
-		*p=free_bits;
+		*p=do_free_bits;
 
 	p=load_sym(mod->handle, "sync_timer_add");
 	if (p)
-		*p=sync_timer_add;
+		*p=do_sync_timer_add;
 
 	p=load_sym(mod->handle, "timer_event_alloc");
 	if (p)
-		*p=timer_event_alloc;
+		*p=do_timer_event_alloc;
 
 	p=load_sym(mod->handle, "usec_timer_add");
 	if (p)
-		*p=usec_timer_add;
+		*p=do_usec_timer_add;
 
 	p=load_sym(mod->handle, "gui_add");
 	if (p)
-		*p=gui_add;
+		*p=do_gui_add;
 
 	p=load_sym(mod->handle, "gui_remove");
 	if (p)
-		*p=gui_remove;
+		*p=do_gui_remove;
 
 	p=load_sym(mod->handle, "clock_counter");
 	if (p)
@@ -262,11 +267,11 @@ static int module_load(char *path, module_t *mod)
 
 	p=load_sym(mod->handle, "sync_timer_unlink");
 	if (p)
-		*p=sync_timer_unlink;
+		*p=do_sync_timer_unlink;
 
 	p=load_sym(mod->handle, "usec_timer_unlink");
 	if (p)
-		*p=usec_timer_unlink;
+		*p=do_usec_timer_unlink;
 
 	return 0;
 }
@@ -291,7 +296,7 @@ int module_new(char *path)
 		fprintf(stderr, "[emux]\tcan not load module because of limit\n");
 		return -1;
 	}
-	printf("new module with id %d @ %p\n", i, mod);
+	printf("[emux51]\tnew module with id %d @ %p\n", i, mod);
 	if (module_load(path, mod)){
 		return -2;
 	}
@@ -311,6 +316,7 @@ int module_new(char *path)
 void module_dump_all(void)
 {
 	int i;
+	printf("[emux51]\tdumping all modules\n");
 	for (i=0; i<MODULE_CNT; i++) {
 		if (modules[i].space) {
 			printf("module id %d @ %p\n", i, modules[i].space);
@@ -332,22 +338,17 @@ int module_destroy(void *instance, const char *reason)
 	void *tmp;
 
 	mod=&modules[get_id(instance)];
-	printf("killing module %d @ %p\n", get_id(instance), mod);
+	printf("[emux51]\tkilling module %d @ %p\n", get_id(instance), mod);
 	if (mod == NULL) {
 		printf("[emux]\ttrying to kill NULL\n");
 		return -1;
 	}
 
-//	dlist_rm_instance(&time_queue, instance);
-//	dlist_rm_instance(&inst_queue, instance);
-
-	
-
 	if (mod->info && mod->info->exit){
 		mod->info->exit(mod->space, reason);
 	}
 
-	/*	WTF? disable port_changed handler	*/
+	/*	TODO: fix it! WTF? disable port_changed handler	*/
 	tmp=mod->info->port_changed;
 	mod->info->port_changed=NULL;
 
@@ -355,7 +356,7 @@ int module_destroy(void *instance, const char *reason)
 
 /*		free alloced bits	*/
 	for(i=0; i<4; i++) {
-		free_bits(instance, i,0xFF);
+		do_free_bits(instance, i,0xFF);
 	}
 	g_free(mod->space);
 
@@ -377,7 +378,7 @@ void module_destroy_all(const char *reason)
 
 	for (i=0; i<MODULE_CNT; i++) {
 		if (modules[i].handle){
-			printf("destroying %d\n", i);
+			//printf("[emux51]destroying %d\n", i);
 			module_destroy(modules[i].space, reason);
 		}
 	}
