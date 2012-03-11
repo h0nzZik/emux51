@@ -1,12 +1,11 @@
 # Makefile for linux and linux to windows cross-compiling
 #TODO: -D GTK_DISABLE_DEPRECATED
-GTK_NEW_FLAGS=-D GTK_DISABLE_SINGLE_INCLUDES -DGDK_DISABLE_DEPRECATED 
+GTK_NEW_FLAGS=-D GTK_DISABLE_SINGLE_INCLUDES -DGDK_DISABLE_DEPRECATED -D GTK_DISABLE_DEPRECATED
 CFLAGS=-c -Wall -O2 -Wformat `${PKG-CONFIG} --cflags gtk+-2.0 glib-2.0` ${GTK_NEW_FLAGS} -ggdb3
 INCLUDE=-I include
 GTK_LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0`
 
 ifeq (${arch}, windows)
-#	PKG-CONFIG=mingw32-pkg-config
 	PKG-CONFIG=i686-pc-mingw32-pkg-config
 	CC=i686-pc-mingw32-gcc
 ifndef (${OUTDIR})
@@ -17,8 +16,7 @@ ifeq (${debug},1)
 	LDFLAGS=${GTK_LDFLAGS} -lwinmm 
 	OUT=${OUTDIR}/emux51-con.exe
 else
-	LDFLAGS=${GTK_LDFLAGS} -lwinmm
-	#-mwindows
+	LDFLAGS=${GTK_LDFLAGS} -lwinmm -mwindows
 	OUT=${OUTDIR}/emux51.exe
 endif
 	DEX=.dll
@@ -28,7 +26,6 @@ else
 	PKG-CONFIG=pkg-config
 	arch=nixies
 	LDFLAGS=${GTK_LDFLAGS} -export-dynamic
-#	LDFLAGS=${GTK_LDFLAGS} --dynamic-list=symbols_to_export
 ifndef (${OUTDIR})
 	OUTDIR=out/nixies
 endif
@@ -74,9 +71,6 @@ ${targets}:
 	@ echo '${CC} src/$@.c'
 	@ ${CC} ${INCLUDE} ${CFLAGS} ${DEFINES} -o ${OBJ}/$@.o src/emux51/$@.c
 
-mods:
-	@ make --makefile=modules/Makefile ARCH=${ARCH}
-
 widgets: ${widgets}
 	@ echo 'linking widgets..'
 	@ ${CC} -shared -o ${OUTDIR}/libemux_widgets${DEX} ${widgeto} `${PKG-CONFIG} --libs gtk+-2.0`
@@ -86,7 +80,7 @@ ${widgets}:
 	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
 
 
-modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod keyboard.mod hello.mod usec_timer_test.mod 5x7matrix.mod
+modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod keyboard.mod hello.mod 5x7matrix.mod 5x7matrix-degraded.mod
 
 modules: ${modules}
 ${modules}:
@@ -104,4 +98,3 @@ clean:
 	rm -f ${OUT}
 	rm -f ${OUTDIR}/libemux_widgets${DEX}
 	rm -f ${OUTDIR}/modules/*${DEX}
-

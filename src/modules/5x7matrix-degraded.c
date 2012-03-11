@@ -18,7 +18,6 @@ typedef struct {
 	char last_data;
 
 	void *off_event;
-	void *reset_event;
 
 	int invert;
 	int history[5];
@@ -62,17 +61,10 @@ void reset_display(instance *self)
 	self->column=0;
 	self->last_data=0xFF;
 	sync_timer_unlink(self->off_event);
-	usec_timer_unlink(self->reset_event);
 	sync_timer_add(self->off_event, 40);
 	
 }
 
-
-void reset_handler(instance *self, void *data)
-{
-	self->column=0;
-
-}
 
 static void update(instance *self)
 {
@@ -84,19 +76,14 @@ static void update(instance *self)
 	/*	raising edge on 7th bit	*/
 	if (((data&0x80) != 0) && ((self->last_data&0x80) == 0)) {
 		self->column++;
-		self->column%=10;
-		usec_timer_add(self->reset_event,80);
-	}
-	/*	falling edge on 7th bit	*/
-	if (((data&0x80) == 0) && ((self->last_data&0x80) != 0)) {
-		usec_timer_unlink(self->reset_event);
+		self->column%=5;
 	}
 
-	if (self->column != 0 && self->column <= 5) {
-		self->history[self->column-1]=1;
+	if (self->column < 5) {
+		self->history[self->column]=1;
 
 		for (i=0; i<7; i++) {
-			led_set_active(self->leds[(/*5+*/self->column-1)%5][i],
+			led_set_active(self->leds[(5+self->column-5)%5][i],
 					((data>>i)&1)^self->invert);
 		}
 	}
@@ -128,8 +115,6 @@ int module_init(instance *self)
 	GtkWidget *select;
 
 	self->invert=1;
-	self->last_data=0xFF;
-	self->column=0;
 
 
 	vbox=gtk_vbox_new(FALSE, 0);
@@ -143,6 +128,9 @@ int module_init(instance *self)
 	table=gtk_table_new(7, 5, TRUE);
 	gtk_box_pack_start(GTK_BOX(vbox), table, TRUE, TRUE, 0);
 
+
+	self->column=0;
+	self->last_data=0xFF;
 
 	/*	randomize colors	*/
 	i=rand()%3;
@@ -170,10 +158,6 @@ int module_init(instance *self)
 	}
 	sync_timer_add(self->off_event, 40);
 
-	self->reset_event=timer_event_alloc(self, M_QUEUE(reset_handler), NULL);
-	if (self->reset_event == NULL)
-		return 1;
-
 	gtk_widget_show_all(vbox);
 	self->window=gui_add(vbox, self, "5x7 matrix display");
 	return 0;
@@ -192,10 +176,6 @@ void module_exit(instance *self, char *reason)
 
 	sync_timer_unlink(self->off_event);
 	g_free(self->off_event);	
-
-	sync_timer_unlink(self->reset_event);
-	g_free(self->reset_event);	
-		
 
 	gui_remove(self->window);
 	
