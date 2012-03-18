@@ -1,60 +1,112 @@
 # Makefile for linux and linux to windows cross-compiling
-#TODO: -D GTK_DISABLE_DEPRECATED
-GTK_NEW_FLAGS=-D GTK_DISABLE_SINGLE_INCLUDES -DGDK_DISABLE_DEPRECATED -D GTK_DISABLE_DEPRECATED
-CFLAGS=-c -Wall -O2 -Wformat `${PKG-CONFIG} --cflags gtk+-2.0 glib-2.0` ${GTK_NEW_FLAGS} -ggdb3
-INCLUDE=-I include
-GTK_LDFLAGS=`${PKG-CONFIG} --libs  gtk+-2.0`
+
+
+
+PROGRAM=emux51
 
 ifeq (${arch}, windows)
-	PKG-CONFIG=i686-pc-mingw32-pkg-config
-	CC=i686-pc-mingw32-gcc
-ifndef (${OUTDIR})
-	OUTDIR=out/windows
-endif
-
-ifeq (${debug},1)
-	LDFLAGS=${GTK_LDFLAGS} -lwinmm 
-	OUT=${OUTDIR}/emux51-con.exe
+	PREFIX		= i686-pc-mingw32-
+	OUTDIR		= out/windows
+	SHARED_EXT	= .dll
+	EXECUTABLE_EXT	= .exe
+	ARCH_LDFLAGS	= -lwinmm -mwindows
+	PIC		=
+	HOME_VAR	= USERPROFILE
 else
-	LDFLAGS=${GTK_LDFLAGS} -lwinmm -mwindows
-	OUT=${OUTDIR}/emux51.exe
-endif
-	DEX=.dll
-	HOME_VAR=USERPROFILE
-
-else
-	PKG-CONFIG=pkg-config
-	arch=nixies
-	LDFLAGS=${GTK_LDFLAGS} -export-dynamic
-ifndef (${OUTDIR})
-	OUTDIR=out/nixies
-endif
-	OUT=${OUTDIR}/emux51
-	PIC=-fPIC
-	DEX=.so
-	HOME_VAR=HOME
+	arch		= nixies
+	PREFIX		=
+	OUTDIR		= out/nixies
+	SHARED_EXT	= .so
+	EXECUTABLE_EXT	=
+	ARCH_LDFLAGS	= -export-dynamic
+	PIC		= -fPIC
+	HOME_VAR	= HOME
 endif
 
-DEFINES=-DMODULE_EXTENSION=\"${DEX}\" -DHOME_VAR=\"${HOME_VAR}\"
-
-ifndef (${OBJ})
-	OBJ=.obj/${arch}
-endif
-
-
-archtarget=${arch}
-
-targets=instructions emux51 module hex settings ${archtarget} gui alarm lists
-objects=${OBJ}/instructions.o ${OBJ}/emux51.o ${OBJ}/${archtarget}.o ${OBJ}/module.o \
-	${OBJ}/hex.o ${OBJ}/gui.o ${OBJ}/settings.o ${OBJ}/alarm.o ${OBJ}/lists.o
-
-widgets=port_selector 7seg led
-widgeto=${OBJ}/port_selector.o ${OBJ}/7seg.o ${OBJ}/led.o
+PKG_CONFIG	= ${PREFIX}pkg-config
+CC		= ${PREFIX}gcc
+OUT		= ${OUTDIR}/${PROGRAM}${EXECUTABLE_EXT}
+MODULE_OUT	= ${OUTDIR}/modules
+GENERAL_CFLAGS	= -c -Wall -O2 -Wformat
 
 
-.PHONY: clean
-.PHONY: build_all
-.PHONY: build
+GTK_NEW_DEFINIES= -D GTK_DISABLE_SINGLE_INCLUDES	\
+		  -D GDK_DISABLE_DEPRECATED		\
+		  -D GTK_DISABLE_DEPRECATED
+
+DEFINES		= -DMODULE_EXTENSION=\"${SHARED_EXT}\"	\
+		  -DHOME_VAR=\"${HOME_VAR}\"		\
+		  ${GTK_NEW_DEFINES}
+
+INCLUDE		= -I include
+
+GTK_CFLAGS	= `${PKG_CONFIG} --cflags gtk+-2.0`
+GTK_LDFLAGS	= `${PKG_CONFIG} --libs   gtk+-2.0`
+
+LDFLAGS		= ${GTK_LDFLAGS}		\
+		  ${ARCH_LDFLAGS}
+
+CFLAGS		= ${GENERAL_CFLAGS}		\
+		  ${GTK_CFLAGS}			\
+		  ${DEFINES}
+
+
+MODULES_CFLAGS	= -D BUILDING_MODULE		\
+		  ${INCLUDE}			\
+		  ${PIC}			\
+		  ${CFLAGS}
+
+
+OBJ		= .obj/${arch}
+
+
+
+#	FILES
+
+archtarget	= ${arch}
+
+targets		= instructions			\
+		  emux51			\
+		  module			\
+		  hex				\
+		  settings			\
+		  ${archtarget}			\
+		  gui				\
+		  alarm				\
+		  lists
+
+objects		= ${OBJ}/instructions.o		\
+		  ${OBJ}/emux51.o		\
+		  ${OBJ}/${archtarget}.o	\
+		  ${OBJ}/module.o		\
+		  ${OBJ}/hex.o			\
+		  ${OBJ}/gui.o			\
+		  ${OBJ}/settings.o		\
+		  ${OBJ}/alarm.o		\
+		  ${OBJ}/lists.o
+
+widgets		= port_selector			\
+		  7seg				\
+		  led
+
+widgeto		= ${OBJ}/port_selector.o	\
+		  ${OBJ}/7seg.o			\
+		  ${OBJ}/led.o
+
+modules		= 3x7seg.mod			\
+		  7seg.mod			\
+		  led.mod			\
+		  switch.mod			\
+		  4x7seg.mod			\
+		  8x7seg.mod			\
+		  keyboard.mod			\
+		  hello.mod			\
+		  5x7matrix.mod			\
+		  5x7matrix-degraded.mod
+
+#.PHONY: clean
+#.PHONY: build_all
+#.PHONY: build
 
 
 build_all: directory widgets build modules
@@ -73,28 +125,36 @@ ${targets}:
 
 widgets: ${widgets}
 	@ echo 'linking widgets..'
-	@ ${CC} -shared -o ${OUTDIR}/libemux_widgets${DEX} ${widgeto} `${PKG-CONFIG} --libs gtk+-2.0`
+	@ ${CC} -shared -o ${OUTDIR}/libemux_widgets${SHARED_EXT} ${widgeto} ${GTK_LDFLAGS}
 
 ${widgets}:
 	@ echo ${CC} src/widgets/$@.c
-	@${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
+	@ ${CC} ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/$@.o src/widgets/$@.c
 
 
-modules=3x7seg.mod 7seg.mod led.mod switch.mod 4x7seg.mod 8x7seg.mod keyboard.mod hello.mod 5x7matrix.mod 5x7matrix-degraded.mod
 
 modules: ${modules}
 ${modules}:
 	@ echo '${CC} src/modules/${@:.mod=.c}'
-	@ ${CC} -DBUILDING_MODULE ${INCLUDE} ${PIC} ${CFLAGS} -o ${OBJ}/modules/${@:.mod=.o}\
-		src/modules/${@:.mod=.c}
+
+	@ ${CC} ${MODULES_CFLAGS} -o ${OBJ}/modules/${@:.mod=.o} src/modules/${@:.mod=.c}
+
 	@ echo 'linking ${OBJ}/modules/${@:.mod=.o}'
-	@ ${CC} -shared -L${OUTDIR} -lemux_widgets -o ${OUTDIR}/modules/${@:.mod=${DEX}}\
-		${OBJ}/modules/${@:.mod=.o} `${PKG-CONFIG} --libs gtk+-2.0`
+	@ ${CC} -shared -L${OUTDIR} -lemux_widgets \
+	  -o ${MODULE_OUT}/${@:.mod=${SHARED_EXT}}\
+	  ${OBJ}/modules/${@:.mod=.o} ${GTK_LDFLAGS}
 lines:
 	@ cat src/emux51/*.c src/modules/*.c src/widgets/*.c include/*.h Makefile | wc -l
 clean:
 	rm -f ${OBJ}/*.o
 	rm -f ${OBJ}/modules/*.o
 	rm -f ${OUT}
-	rm -f ${OUTDIR}/libemux_widgets${DEX}
-	rm -f ${OUTDIR}/modules/*${DEX}
+	rm -f ${OUTDIR}/libemux_widgets${SHARED_EXT}
+	rm -f ${OUTDIR}/modules/*${SHARED_EXT}
+
+install:
+	mkdir -p ${INSTALL_PREFIX}/bin
+	mkdir -p ${INSTALL_PREFIX}/lib/emux51-modules
+	cp ${OUT} ${INSTALL_PREFIX}/bin
+	cp ${OUTDIR}/libemux_widgets${SHARED_EXT} ${INSTALL_PREFIX}/lib
+	cp -R ${OUTDIR}/modules/ ${INSTALL_PREFIX}/lib/emux51-modules
