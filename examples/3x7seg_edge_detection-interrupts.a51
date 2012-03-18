@@ -1,5 +1,6 @@
-;	zobrazuje 000 - 999 na 3*7seg displej,
-;	cislo se navysi po detekci sestupne hrany.
+;	Shows number from range 000 - 999 at 3x7seg display,
+;	increasing it after falling edge.
+;	Using interrupt from timer 0
 
 horni	equ	0FFh
 dolni	equ	000h
