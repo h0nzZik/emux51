@@ -1,4 +1,9 @@
-*	Welcome to emux51, the modular 8051 emulator.
+*********************************************************
+*	Welcome to Emux51, free modular 8051 emulator.	*
+*	Home page: https://github.com/h0nzZik/emux51	*
+*	Emulator licence:  GPLv3 (see 'gpl-3.0.txt')	*
+*	Example sources:   Public Domain.		*
+*********************************************************
 
 		Priorities:
 *	modularity
@@ -16,10 +21,10 @@
 
 
 		Status:
-*	All instructions, excluding MOVX.	[= done  =]
+*	All instructions, excluding MOVX	[= done  =]
 *	Interrupts				[= done  =]
 *	Configuration				[= basic =]
-*	Timers					[= check =]
+*	Separated data memory and SFR		[= done	 =]
 *
 *	Implemented modules:
 *	* Leds
@@ -29,13 +34,19 @@
 *	* 4x7seg dynamic display
 *	* 8x7seg dynamic display
 *	* 3x4 matrix keyboard
+*	* 5x7 matrix display
 
 		TODO:
 *	More config options
 *	Better Intel HEX support
-*	Stepping && Debug mode
-*	Avoid deprecated GTK/GDK symbols
-*	Improve UI
+*	Stepping && Debug mode && Disassembly
+*	Interrupt log.
+*	Serial line
+
+*	Instalation:
+$	make
+$	make INSTALL_PREFIX=/usr install
+
 
 
 
