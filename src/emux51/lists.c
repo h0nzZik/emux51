@@ -139,10 +139,10 @@ void dlist_perform(dlist_t **first, unsigned steps)
 
 void dlist_unlink(dlist_t **first, dlist_t *entry)
 {
-	printf("[emux51]\tunlinking node %p from list:\n"
+/*	printf("[emux51]\tunlinking node %p from list:\n"
 		"\t->prev:\t%p\n\t->next:\t%p\n",
 		entry, entry->prev, entry->next);
-
+*/
 	if (entry->prev)
 		entry->prev->next=entry->next;
 	else

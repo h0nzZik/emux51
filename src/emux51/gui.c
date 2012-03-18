@@ -31,6 +31,9 @@ GtkWidget *freq_label;
 GtkWidget *run_pause_button;
 GtkWidget *stop_button;
 
+GtkWidget *int_textview;
+GtkTextBuffer *int_textbuffer;
+
 
 char last_module_dir[PATH_MAX];
 char *hex_file;
@@ -53,13 +56,14 @@ G_MODULE_EXPORT void edit_change_frequency();
 /*			file load			*/
 static void set_file_label(const char *str)
 {
-	char buff[20];
+/*	char buff[20];
 
 	strncpy(buff, str, 20);
 	buff[19]=0;
-//	gtk_widget_set_tooltip_text(GTK_WIDGET(file_label), str);
 	gtk_label_set_text(GTK_LABEL(file_label), buff);
 	gtk_window_set_title(GTK_WINDOW(window), str);
+*/
+	gtk_label_set_text(GTK_LABEL(file_label), str);
 }
 
 static int emux51_load_hex(char *file)
@@ -118,8 +122,10 @@ void file_load_hex(void *data)
 
 	emux51_stop();
 
-	if (hex_file)
+	if (hex_file){
 		g_free(hex_file);
+		hex_file=NULL;
+	}
 
 	/*	create dialog	*/
 	file_dialog=gtk_file_chooser_dialog_new("Select file", NULL,
@@ -435,6 +441,21 @@ void view_dump_toggled(GtkWidget *button)
 	}
 }
 
+void int_log_append(const char *str)
+{
+	GtkTextMark *end;
+	GtkTextIter *iter;
+//	printf("appending: %s\n", str);
+
+//	gtk_text_buffer_get_end_iter(int_textbuffer, &iter);
+//	gtk_text_buffer_insert_at_cursor(int_textbuffer,str, -1);
+//	gtk_text_buffer_insert(int_textbuffer, &iter,str,-1);
+
+
+//	gtk_text_view_scroll_mark_onscreen(int_textview, end);
+
+}
+
 /*	starts gui	*/
 int gui_run(int *argc, char **argv[])
 {
@@ -481,6 +502,12 @@ int gui_run(int *argc, char **argv[])
 
 	stop_button	= GTK_WIDGET(gtk_builder_get_object
 			(builder, "tool_stop"		));
+
+	int_textview	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "interrupt_textview"));
+
+	int_textbuffer	= gtk_builder_get_object
+			(builder, "interrupt_textbuffer");	
 
 	gtk_builder_connect_signals(builder, NULL);
 	g_object_unref(builder);

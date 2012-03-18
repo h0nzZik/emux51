@@ -110,19 +110,18 @@ long long cycle_counter;
 
 
 /*	data memory operations		*/
-unsigned char read_data (unsigned addr);
-void write_data(unsigned addr, char data);
+unsigned char read_data (unsigned char addr);
+void write_data(unsigned char addr, char data);
 
-unsigned char indirect_read_data(unsigned addr);
-void indirect_write_data(unsigned addr, char data);
+unsigned char indirect_read_data(unsigned char addr);
+void indirect_write_data(unsigned char addr, char data);
 
 /*	operations with registers r0-r7	*/
-inline unsigned char read_register(int reg);
-inline void write_register(int reg, char data);
+unsigned char read_register(int reg);
+void write_register(int reg, char data);
 
 /*	code memory operations		*/
-inline unsigned char read_code(unsigned addr);
-inline void write_code(unsigned addr, char data);
+unsigned char read_code(unsigned short addr);
 
 /*	operations with Acc		*/
 unsigned char read_Acc(void);

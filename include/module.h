@@ -22,13 +22,13 @@ typedef struct {
 
 
 typedef struct {
-//	void *handle;
 
 	GModule *module;
 	int id;
 	char mask[PORTS_CNT];
 	void *space;
-	module_info_t *info;
+	//module_info_t *info;
+	module_info_t info;
 } module_t;
 
 
@@ -51,15 +51,12 @@ void * (*timer_event_alloc)(void *space, void (*f)(void *space, void *data), voi
 
 void (*sync_timer_add)(void *event, unsigned ms)=NULL;
 
-int (*usec_timer_add)(void *space, unsigned useconds,
-			void (*f)(void *space, void *data), void *data)=NULL;
-
+int (*usec_timer_add)(void *event, unsigned us)=NULL;
 void (*sync_timer_unlink)(void *entry)=NULL;
 void (*usec_timer_unlink)(void *entry)=NULL;
 
 void * (*gui_add)(void *object, void *delete_data, const char *title)=NULL;
 void (*gui_remove)(void *window);
-#else
 
 int module_new(char *path);
 int module_destroy(void *space, const char *reason);

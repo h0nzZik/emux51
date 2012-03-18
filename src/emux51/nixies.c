@@ -33,27 +33,6 @@ int setup_timer(float freq, void (*callback)(void))
 	return 0;	
 }
 
-#if 0
-void *load_lib(const char *path)
-{
-	void *lib;
-	lib=dlopen(path, RTLD_NOW|RTLD_LOCAL);
-	return lib;
-}
-
-void *load_sym(void *lib, const char *name)
-{
-	void *sym;
-	sym=dlsym(lib, name);	
-	return sym;
-}
-
-void close_lib(void *lib)
-{
-	dlclose(lib);	
-}
-#endif
-
 int arch_create_pipe(int pipefd[2])
 {
 	return(pipe(pipefd));

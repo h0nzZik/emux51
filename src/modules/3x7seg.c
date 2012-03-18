@@ -75,10 +75,8 @@ void import_segments(instance *self)
 void module_read(instance *self, int port)
 {
 	if (port != self->port_no) {
-//		printf("to me nezajima\n");
 		return;
 	}
-	//printf("3x7 reading\n");
 	import_segments(self);
 }
 
@@ -107,6 +105,7 @@ int module_init(instance *self)
 	GtkWidget *hbox;
 	GtkWidget *select;
 
+	GtkWidget *tmpbox;
 	self->mask=0xFF;
 
 
@@ -117,13 +116,15 @@ int module_init(instance *self)
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(hbox), select, FALSE, FALSE, 0);
-
+//	gtk_container_set_border_width(GTK_CONTAINER(hbox), 10);
 	for(i=0; i<3; i++) {
 		self->ssegs[i]=seven_seg_new();
-		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 10);
+//		tmpbox=gtk_vbox_new(FALSE,0);
+//		gtk_container_set_border_width(GTK_CONTAINER(tmpbox), 10);
+		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 0);
+//		gtk_box_pack_start(GTK_BOX(hbox), tmpbox, FALSE, FALSE, 0);
 	}
 
-//	time_queue_add(self, 200, M_QUEUE(off_handler), NULL);
 	/*	allocate timer event	*/
 	self->event=timer_event_alloc(self, M_QUEUE(off_handler), NULL);
 	if (self->event == NULL) {

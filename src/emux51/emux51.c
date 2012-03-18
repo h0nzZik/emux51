@@ -32,7 +32,6 @@ volatile gint G_GNUC_MAY_ALIAS running;
 
 int loaded=0;
 int interrupt_state=0;
-//char hexfile[PATH_MAX];
 
 /*	64K  code memory		*/
 unsigned char code_memory[CODE_LENGHT];
@@ -47,11 +46,9 @@ unsigned char port_latches[PORTS_CNT];
 unsigned char port_collectors[PORTS_CNT];
 /*	port external state	*/
 unsigned char port_externals[PORTS_CNT];
-//unsigned char port_fall[PORTS_CNT];
 /*	P3 falling edge	*/
 unsigned char fall;
 /*	machine cycle counter	*/
-//unsigned long counter=0;
 long long cycle_counter=0;
 /*	oscilator frequency	*/
 unsigned long Fosc=12000000;
@@ -111,7 +108,7 @@ void update_port(int port)
 }
 /*	<API for instructions>	*/
 
-unsigned char read_data(unsigned addr)
+unsigned char read_data(unsigned char addr)
 {
 	if (addr < 0x80)
 		return(data_memory[addr]);
@@ -120,7 +117,7 @@ unsigned char read_data(unsigned addr)
 	
 }
 
-void write_data(unsigned addr, char data)
+void write_data(unsigned char addr, char data)
 {
 	int port;
 
@@ -137,22 +134,22 @@ void write_data(unsigned addr, char data)
 	}
 }
 
-unsigned char indirect_read_data(unsigned addr)
+unsigned char indirect_read_data(unsigned char addr)
 {
 	return (data_memory[addr]);
 }
-void indirect_write_data(unsigned addr, char data)
+void indirect_write_data(unsigned char addr, char data)
 {
 	data_memory[addr]=data;
 }
 
-unsigned char read_code(unsigned addr)
+unsigned char read_code(unsigned short addr)
 {
 	return(code_memory[addr]);
 }
 
 
-unsigned reg_to_addr(int reg)
+unsigned char reg_to_addr(int reg)
 {
 	unsigned base;
 
@@ -323,6 +320,10 @@ void do_reset(void)
 	sfr_memory[0xB0]=0xFF;
 
 	PC=0;
+
+	cycle_counter=0;
+
+
 }
 
 
@@ -532,24 +533,31 @@ static void do_int_requests(void)
 	if (EX0_PREQUEST) {
 		clr_bit(IE0);
 //		printf("[emux]\tjumping to ext0\n");
+		int_log_append("[High priority] External 0\n");
 		jump_to(EX0_ADDR);
 		return;
 	}
 	if (ET0_PREQUEST) {
 		clr_bit(TF0);
 //		printf("[emux]\tjumping to timer 0\n");
+		int_log_append("[High priority] External 0\n");
+		
 		jump_to(ET0_ADDR);
 		return;
 	}
 	if (EX1_PREQUEST) {
 		clr_bit(IE0);
 //		printf("[emux]\tjumping to ext1\n");
+		int_log_append("[High priority] External 0\n");
+
 		jump_to(EX1_ADDR);
 		return;
 	}
 	if (ET1_PREQUEST) {
 		clr_bit(TF1);
 //		printf("[emux]\tjumping to timer 1\n");
+		int_log_append("[High priority] External 0\n");
+	
 		jump_to(ET1_ADDR);
 		return;
 	}
@@ -557,24 +565,30 @@ static void do_int_requests(void)
 	if (EX0_REQUEST) {
 		clr_bit(IE0);
 //		printf("[emux]\tjumping to ext0\n");
+		int_log_append("[Low priority]\tExternal 0\n");
+		
 		jump_to(EX0_ADDR);
 		return;
 	}
 	if (ET0_REQUEST) {
 		clr_bit(TF0);
 //		printf("[emux]\tjumping to timer 0\n");
+		int_log_append("[Low priority]\tTimer 0\n");
+		
 		jump_to(ET0_ADDR);
 		return;
 	}
 	if (EX1_REQUEST) {
 		clr_bit(IE1);
 //		printf("[emux]\tjumping to ext1\n");
+		int_log_append("[Low priority]\tExternal 1\n");
 		jump_to(EX1_ADDR);
 		return;
 	}
 	if (ET1_REQUEST) {
 		clr_bit(TF1);
 //		printf("[emux]\tjumping to timer 1\n");
+		int_log_append("[low priority]\tTimer 1\n");
 		jump_to(ET1_ADDR);
 		return;
 	}
@@ -592,7 +606,6 @@ void do_every_instruction_stuff(int times)
 {
 
 	while (times){
-//		counter++;
 		do_timers_stuff();
 		times--;
 	}
@@ -627,7 +640,6 @@ void alarm_handler(void)
 		return;
 	time_queue_perform();
 
-//	gui_callback();
 	cnt=remaining_machine_cycles/remaining_sync_cycles;
 	last=do_few_instructions(cnt+last);
 	remaining_machine_cycles-=cnt;
@@ -646,38 +658,14 @@ void sigint_handler(int data)
 	exit(0);
 }
 
-
-#if 0
-char *dump_head="--\t00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0A\t0B\t0C\t0D\t0E\t0F\n";
-
-void data_dump(char *buffer)
-{
-	unsigned int i, j;
-
-	sprintf(buffer, dump_head);
-	buffer+=strlen(buffer);
-
-	for (i=0; i<16; i++) {
-		sprintf(buffer, "%X0\t", i);
-		buffer+=3;
-		for (j=0; j<16; j++) {
-			sprintf(buffer, "%02X\t", data_memory[16*i+j]);
-			buffer+=3;
-		}
-		*buffer++='\n';
-	}
-
-}
-#endif
 int main(int argc, char *argv[])
 {
-//	int option;
 	printf("[emux]\tstarting..\n");
 	
-	/*	arguments	*/
-	
-	
-	
+	if (g_module_supported() == FALSE) {
+		printf("[emux51]\tWarning: GModule is not supported on this system.\n");
+	}
+
 	srand(time(NULL));
 	config_parse();
 	signal(SIGINT, sigint_handler);
