@@ -305,7 +305,8 @@ void djnz_addr_addr(unsigned short idx)
 	unsigned char data;
 
 	addr=read_code(idx+1);
-	data=read_data(addr);
+//	data=read_data(addr);
+	data=rmw_read(addr);	
 	reladdr=read_code(idx+2);
 	data--;
 	write_data(addr, data);
@@ -460,6 +461,16 @@ void jb(unsigned short idx)
 		PC+=inc;
 	}
 }
+
+/*
+ * 	NOTE:
+ * When this instruction is used to modify an output port,
+ * the value used as the port data is read from the output data latch,
+ * not the input pins of the port.
+ * (see http://www.keil.com/support/man/docs/is51/is51_jbc.htm)
+ *
+ */
+
 void jbc(unsigned short idx)
 {
 	signed char inc;
@@ -469,7 +480,7 @@ void jbc(unsigned short idx)
 	addr=read_code(idx+1);
 	PC+=3;
 
-	if(test_bit(addr)){
+	if(test_bit_rmw(addr)){
 		PC+=inc;
 		clr_bit(addr);
 	}
@@ -523,7 +534,9 @@ void ljmp(unsigned short idx)
 
 void ajmp(unsigned short idx)
 {
-	PC=(((code_memory[idx]>>5)&0x07)<<8)|(code_memory[idx+1]);
+	PC =	(((code_memory[idx]>>5)&0x07)<<8)	|
+		(code_memory[idx+1])			|
+		(PC&0xF800);
 }
 void sjmp(unsigned short idx)
 {
@@ -548,7 +561,11 @@ void acall(unsigned short idx)
 	push((PC+2)&0x00FF);
 	push((PC+2)>>8);
 
-	PC=(((code_memory[idx]>>5)&0x07)<<8)|(code_memory[idx+1]);
+//	PC=(((code_memory[idx]>>5)&0x07)<<8)|(code_memory[idx+1]);
+	PC =	(((code_memory[idx]>>5)&0x07)<<8)	|
+		(code_memory[idx+1])			|
+		(PC&0xF800);
+
 }
 void lcall(unsigned short idx)
 {
@@ -738,7 +755,7 @@ void inc_addr(unsigned short idx)
 	unsigned char data;
 
 	addr=read_code(idx+1);
-	data=read_data(addr);
+	data=rmw_read(addr);
 	data++;
 	write_data(addr, data);
 	PC+=2;
@@ -782,7 +799,7 @@ void dec_addr(unsigned short idx)
 	unsigned char data;
 
 	addr=read_code(idx+1);
-	data=read_data(addr);
+	data=rmw_read(addr);
 	data--;
 	write_data(addr, data);
 	PC+=2;
@@ -806,7 +823,7 @@ void anl_addr_a(unsigned short idx)
 	unsigned char addr;
 
 	addr=read_code(idx+1);
-	data=read_data(addr);
+	data=rmw_read(addr);
 	data&=read_Acc();
 	write_data(addr, data);
 	PC+=2;
@@ -853,7 +870,7 @@ void anl_addr_imm8(unsigned short idx)
 
 	addr=read_code(idx+1);
 	mask=read_code(idx+2);
-	data=read_data(addr);
+	data=rmw_read(addr);
 	data&=mask;
 	write_data(addr, mask);
 	PC+=3;
@@ -890,7 +907,7 @@ void orl_addr_a(unsigned short idx)
 
 	a=read_Acc();
 	addr=read_code(idx+1);
-	data=read_data(addr);
+	data=rmw_read(addr);
 	data|=a;
 	write_data(addr, data);
 	PC+=2;
@@ -901,7 +918,7 @@ void orl_addr_imm8(unsigned short idx)
 	unsigned char data;
 
 	addr=read_code(idx+1);
-	data=read_code(idx+2);
+	data=rmw_read(idx+2);
 	data|=read_data(addr);
 	write_data(addr, data);
 	PC+=3;
@@ -914,7 +931,7 @@ void orl_a_imm8(unsigned short idx)
 	a=read_Acc();
 	data=read_code(idx+1);
 	data|=a;
-	write_Acc(a);
+	write_Acc(data);
 	PC+=2;
 }
 void orl_a_addr(unsigned short idx)
@@ -984,7 +1001,7 @@ void xrl_addr_a(unsigned short idx)
 
 	a=read_Acc();
 	addr=read_code(idx+1);
-	data=read_data(addr);
+	data=rmw_read(addr);
 	data^=a;
 	write_data(addr, data);
 	PC+=2;
@@ -996,7 +1013,7 @@ void xrl_addr_imm8(unsigned short idx)
 
 	addr=read_code(idx+1);
 	data=read_code(idx+2);
-	data^=read_data(addr);
+	data^=rmw_read(addr);
 	write_data(addr, data);
 	PC+=3;
 }
@@ -1166,8 +1183,10 @@ void empty(unsigned short idx)
 {
 	fprintf(stderr, "[emux]\tunknown instruction at %u\n", idx);
 	fprintf(stderr, "[emux]\t\topcode: 0x%x\n", read_code(idx));
-	exit(1);
+//	exit(1);
+	PC++;
 }
+
 
 /******************************************************************************/
 /*				INITIALIZATION				      */
@@ -1667,5 +1686,12 @@ void init_instructions(void)
 	init_bit_cond_jumps();
 	init_aritm_instructions();
 	init_rotary();
+/*
+	for(i=0; i<256; i++) {
+		if(opcodes[i].f == empty) {
+			printf("empty opcode: 0x%02x\n", i);
+		}
+	}
+*/
 }
 

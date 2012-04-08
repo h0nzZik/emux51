@@ -86,6 +86,22 @@ static void port_select(PortSelector *ps, instance *self)
 	import_segments(self);
 }
 
+
+int module_reset(instance *self)
+{
+	int i;
+	for (i=0; i<8; i++) {
+		seven_seg_set_segments(self->ssegs[i], 0);
+		self->history[i]=0;
+	}
+	sync_timer_unlink(self->event);
+	sync_timer_add(self->event, 40);
+	self->current=0x00;
+	return 0;
+}
+
+
+
 int module_init(instance *self)
 {
 	/*	init module	*/
@@ -130,5 +146,6 @@ module_info_t module_info={
 	M_INIT		(module_init),
 	M_EXIT		(module_exit),
 	M_PORT_CHANGED	(module_read),
+	M_RESET		(module_reset),
 };
 

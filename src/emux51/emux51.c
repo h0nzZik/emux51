@@ -143,6 +143,13 @@ void indirect_write_data(unsigned char addr, char data)
 	data_memory[addr]=data;
 }
 
+unsigned char rmw_read(unsigned char addr)
+{
+	if (isport(addr))
+		return(port_latches[addr_to_port(addr)]);
+	return(read_data(addr));
+}
+
 unsigned char read_code(unsigned short addr)
 {
 	return(code_memory[addr]);
@@ -236,11 +243,13 @@ void set_bit(unsigned char bit_addr)
 
 	byte=addr_to_bit_byte(bit_addr);
 	bit=addr_to_bit_bit(bit_addr);
-
+/*
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
 	else 
 		data=read_data(byte);
+*/
+	data=rmw_read(byte);
 	data|=1<<bit;
 	write_data(byte, data);
 
@@ -254,11 +263,13 @@ void clr_bit(unsigned char bit_addr)
 
 	byte=addr_to_bit_byte(bit_addr);
 	bit=addr_to_bit_bit(bit_addr);
-
+/*
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
 	else
 		data=read_data(byte);
+*/
+	data=rmw_read(byte);
 	data&=~(1<<bit);
 	write_data(byte, data);
 }
@@ -281,10 +292,13 @@ void neg_bit(unsigned char bit_addr)
 
 	byte=addr_to_bit_byte(bit_addr);
 	bit=addr_to_bit_bit(bit_addr);
+/*
 	if (isport(byte))	
 		data=port_latches[addr_to_port(byte)];
 	else
 		data=read_data(byte);
+*/
+	data=rmw_read(byte);
 	data^=1<<bit;
 	write_data(byte, data);
 
@@ -299,6 +313,17 @@ int test_bit(unsigned char bit_addr)
 	byte=addr_to_bit_byte(bit_addr);
 	bit=addr_to_bit_bit(bit_addr);
 	return(read_data(byte)&(1<<bit)?1:0);
+}
+
+int test_bit_rmw(unsigned char bit_addr)
+{
+	unsigned char byte;
+	unsigned char bit;
+
+	byte=addr_to_bit_byte(bit_addr);
+	bit=addr_to_bit_bit(bit_addr);
+	return(rmw_read(byte)&(1<<bit)?1:0);
+
 }
 
 /*	</API for instructions>	*/
@@ -323,6 +348,10 @@ void do_reset(void)
 
 	cycle_counter=0;
 
+	interrupt_state=0;
+
+	printf("[emux51]\treset\n");
+	module_reset_all();
 
 }
 
@@ -518,8 +547,9 @@ static void do_int_requests(void)
 	if (interrupt_state & 0x2)
 		return;
 	/* low priority request can be interrupted only by hight */
-	if ((interrupt_state == 1) && (HAVE_PREQUEST == 0))
+	if ((interrupt_state == 1) && (HAVE_PREQUEST == 0)){
 		return;
+	}
 
 	if (HAVE_PREQUEST == 1)
 		interrupt_state|=2;
@@ -666,6 +696,15 @@ int main(int argc, char *argv[])
 		printf("[emux51]\tWarning: GModule is not supported on this system.\n");
 	}
 
+	g_set_application_name("EmuX51");
+	printf("argv[0]: %s\n", argv[0]);
+	printf( "appname: %s\n"
+		"prgname: %s\n"
+		"usernme: %s\n",
+		g_get_application_name(),
+		g_get_prgname(),
+		g_get_user_name());
+
 	srand(time(NULL));
 	config_parse();
 	signal(SIGINT, sigint_handler);
@@ -682,6 +721,7 @@ int main(int argc, char *argv[])
 
 void program_start(void)
 {
+	printf("program_start\n");
 	remaining_machine_cycles=Fosc;
 	remaining_sync_cycles=12*SYNC_FREQ;
 	g_atomic_int_set(&running, 1);

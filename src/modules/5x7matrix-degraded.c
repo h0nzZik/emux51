@@ -105,6 +105,30 @@ void module_read(instance *self, int port)
 	update(self);
 }
 
+/*
+int module_reset(instance *self)
+{
+	int i,j;
+
+	sync_timer_unlink(self->off_event);
+
+
+	for(i=0; i<5; i++) {
+		self->history[i]=0;
+		for(j=0; j<7; j++) {
+			led_set_active(self->leds[i][j], 0);
+		}
+	}
+	self->column=0;
+	self->last_data=0xFF;
+
+	sync_timer_add(self->off_event, 40);
+
+
+	return 0;
+}
+
+*/
 
 int module_init(instance *self)
 {
@@ -188,4 +212,5 @@ module_info_t module_info={
 	M_INIT		(module_init),
 	M_EXIT		(module_exit),
 	M_PORT_CHANGED	(module_read),
+	M_RESET		(reset_display),
 };

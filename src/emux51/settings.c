@@ -1,6 +1,5 @@
 /*
  *	settings.c - simple support for loading settings.
- *	WARNING: This file is written quick&dirty.
  */
 
 #include <stdio.h>
@@ -22,18 +21,25 @@
 
 const char *known_vars[]={ "module_dir", "hex_dir", NULL };
 
-char _configfile[PATH_MAX+3+STRLEN(CFGNAME)+STRLEN(CFGDIR)];
+//char _configfile[PATH_MAX+3+STRLEN(CFGNAME)+STRLEN(CFGDIR)];
 
 char *configfile(void)
 {
-	char *dir=getenv(HOME_VAR);
+	static char *config_file=NULL;
 
-	if (dir)
-		sprintf(_configfile, "%s%c%s%c%s",
-			dir, G_DIR_SEPARATOR, CFGDIR, G_DIR_SEPARATOR, CFGNAME);
-	else
-		sprintf(_configfile, "./.%s", CFGNAME);
-	return _configfile;
+	if (config_file == NULL) {
+		#ifdef PORTABLE
+		printf("portable build\n");
+		config_file=g_build_filename(CFGDIR,CFGNAME, NULL);
+		#else
+		config_file=g_build_filename(g_getenv(HOME_VAR),
+						CFGDIR, CFGNAME, NULL);
+		#endif
+		printf("[emux51]\tconfig: %s\n", config_file);
+	}
+	
+	return config_file;
+
 }
 
 int config_parse(void)

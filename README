@@ -21,10 +21,10 @@
 
 
 		Status:
-*	All instructions, excluding MOVX	[= done  =]
-*	Interrupts				[= done  =]
-*	Configuration				[= basic =]
-*	Separated data memory and SFR		[= done	 =]
+*	All instructions, excluding MOVX
+*	Interrupts
+*	Configuration
+*	Separated data memory and SFR
 *
 *	Implemented modules:
 *	* Leds
@@ -36,15 +36,16 @@
 *	* 3x4 matrix keyboard
 *	* 5x7 matrix display
 
-		TODO:
-*	More config options
-*	Better Intel HEX support
-*	Stepping && Debug mode && Disassembly
-*	Interrupt log.
-*	Serial line
+	TODO:
+*	* More config options
+*	* Better Intel HEX support
+*	* Stepping && Debug mode && Disassembly
+*	* Interrupt log.
+*	* Serial line
+*	* Incremental rotary encoder module
 
 *	Instalation:
-$	make
+$	make GLADE_FILE=/usr/share/emux51/emux.glade
 $	make INSTALL_PREFIX=/usr install
 
 

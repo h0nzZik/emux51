@@ -24,6 +24,8 @@
 #define B_reg	0xF0
 #define DPH	0x83
 #define DPL	0x82
+#define IE	0xA8
+#define IP	0xB8
 
 /****************************************/
 /*		bit adresses		*/
@@ -116,6 +118,8 @@ void write_data(unsigned char addr, char data);
 unsigned char indirect_read_data(unsigned char addr);
 void indirect_write_data(unsigned char addr, char data);
 
+unsigned char rmw_read(unsigned char addr);
+
 /*	operations with registers r0-r7	*/
 unsigned char read_register(int reg);
 void write_register(int reg, char data);
@@ -132,6 +136,7 @@ void sub_Acc(unsigned char decrement);
 
 /*	operations with bit adress	*/
 int test_bit(unsigned char addr);
+int test_bit_rmw(unsigned char bit_addr);
 void set_bit(unsigned char addr);
 void clr_bit(unsigned char addr);
 void neg_bit(unsigned char addr);

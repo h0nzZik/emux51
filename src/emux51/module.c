@@ -188,10 +188,7 @@ void module_export_port(int port)
 	module_t *mod;
 	for(i=0; i<MODULE_CNT; i++) {
 		mod=&modules[i];
-/*		if (mod->module && mod->info->port_changed){
-			mod->info->port_changed(mod->space, port);
-		}	
-*/
+
 		if (mod->module && mod->info.port_changed) {
 			mod->info.port_changed(mod->space, port);
 		}
@@ -231,8 +228,6 @@ static int module_load(char *path, module_t *mod)
 		info->exit, info->port_changed);	
 	
 	memcpy(&(mod->info), info, sizeof(*info));
-
-	//mod->info=info;
 
 	if (g_module_symbol(mod->module,"read_port",(gpointer *)&p) == TRUE)
 		*p=do_read_port;
@@ -299,11 +294,10 @@ int module_new(char *path)
 	}
 	mod->id=i;
 
-//	space=g_malloc0(mod->info->space_size);
 	space=g_malloc0(mod->info.space_size);
 	mod->space=space;
 	*(int *)space=mod->id;
-//	i=mod->info->init(space);
+
 	i=mod->info.init(space);	
 	if (i) {
 		module_destroy(mod->space, "can't initialize\n");
@@ -314,8 +308,9 @@ int module_new(char *path)
 
 void module_dump_all(void)
 {
-	int i;
 #if 0
+	int i;
+
 	printf("[emux51]\tdumping all modules\n");
 	for (i=0; i<MODULE_CNT; i++) {
 		if (modules[i].space) {
@@ -335,7 +330,6 @@ int module_destroy(void *instance, const char *reason)
 {
 	module_t *mod;
 	int i;
-	void *tmp;
 
 	mod=&modules[get_id(instance)];
 	printf("[emux51]\tkilling module %d @ %p\n", get_id(instance), mod);
@@ -343,18 +337,9 @@ int module_destroy(void *instance, const char *reason)
 		printf("[emux]\ttrying to kill NULL\n");
 		return -1;
 	}
-/*
-	if (mod->info && mod->info->exit){
-		mod->info->exit(mod->space, reason);
-	}
-*/
 	if (mod->info.exit) {
 		mod->info.exit(mod->space, reason);
 	}
-	/*	TODO: fix it! WTF? disable port_changed handler	*/
-//	tmp=mod->info->port_changed;
-//	mod->info->port_changed=NULL;
-
 	mod->info.port_changed=NULL;
 
 
@@ -364,14 +349,8 @@ int module_destroy(void *instance, const char *reason)
 		do_free_bits(instance, i,0xFF);
 	}
 	g_free(mod->space);
-
-//	mod->info->port_changed=tmp;
-
 	g_module_close(mod->module);
-
-
 	memset(mod, 0, sizeof(module_t));	
-
 	printf("[emux]\tmodule killed.\n");
 	module_dump_all();
 	return 0;
@@ -390,7 +369,16 @@ void module_destroy_all(const char *reason)
 	}
 }
 
+void module_reset_all(void)
+{
+	int i;
 
+	for (i=0; i<MODULE_CNT; i++) {
+		if (modules[i].module && modules[i].info.reset) {
+			modules[i].info.reset(modules[i].space);
+		}
+	}
+}
 
 
 /*	called from main while starting program	*/

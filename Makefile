@@ -1,7 +1,5 @@
 # Makefile for linux and linux to windows cross-compiling
 
-
-
 PROGRAM=emux51
 
 ifeq (${arch}, windows)
@@ -12,6 +10,7 @@ ifeq (${arch}, windows)
 	ARCH_LDFLAGS	= -lwinmm -mwindows
 	PIC		=
 	HOME_VAR	= USERPROFILE
+	USER_DEFINES	= -D PORTABLE
 else
 	arch		= nixies
 	PREFIX		=
@@ -21,6 +20,10 @@ else
 	ARCH_LDFLAGS	= -export-dynamic
 	PIC		= -fPIC
 	HOME_VAR	= HOME
+endif
+
+ifndef (${GLADE_FILE})
+	GLADE_FILE=emux.glade
 endif
 
 PKG_CONFIG	= ${PREFIX}pkg-config
@@ -34,8 +37,9 @@ GTK_NEW_DEFINIES= -D GTK_DISABLE_SINGLE_INCLUDES	\
 		  -D GDK_DISABLE_DEPRECATED		\
 		  -D GTK_DISABLE_DEPRECATED
 
-DEFINES		= -DMODULE_EXTENSION=\"${SHARED_EXT}\"	\
-		  -DHOME_VAR=\"${HOME_VAR}\"		\
+DEFINES		= -D MODULE_EXTENSION=\"${SHARED_EXT}\"	\
+		  -D HOME_VAR=\"${HOME_VAR}\"		\
+		  -D EMUX51_GLADE_FILE=\"${GLADE_FILE}\"\
 		  ${GTK_NEW_DEFINES}
 
 INCLUDE		= -I include
@@ -48,7 +52,8 @@ LDFLAGS		= ${GTK_LDFLAGS}		\
 
 CFLAGS		= ${GENERAL_CFLAGS}		\
 		  ${GTK_CFLAGS}			\
-		  ${DEFINES}
+		  ${DEFINES}			\
+		  ${USER_DEFINES}
 
 
 MODULES_CFLAGS	= -D BUILDING_MODULE		\
@@ -108,11 +113,12 @@ modules		= 3x7seg.mod			\
 #.PHONY: build_all
 #.PHONY: build
 
-
 build_all: directory widgets build modules
+
 
 directory:
 	mkdir -p ${OBJ}/modules
+	mkdir -p ${OUTDIR}/modules
 
 
 build:	${targets} gui alarm
@@ -155,6 +161,8 @@ clean:
 install:
 	mkdir -p ${INSTALL_PREFIX}/bin
 	mkdir -p ${INSTALL_PREFIX}/lib/emux51-modules
+	mkdir -p ${INSTALL_PREFIX}/share/emux51
+	cp emux.glade ${INSTALL_PREFIX}/share/emux51/emux.glade
 	cp ${OUT} ${INSTALL_PREFIX}/bin
 	cp ${OUTDIR}/libemux_widgets${SHARED_EXT} ${INSTALL_PREFIX}/lib
 	cp -R ${OUTDIR}/modules/ ${INSTALL_PREFIX}/lib/emux51-modules

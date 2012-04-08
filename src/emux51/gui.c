@@ -12,13 +12,15 @@
 #include <gtk/gtk.h>
 #include <gmodule.h>
 
-//#include <locale.h>
-
 #include <module.h>
 #include <settings.h>
 #include <gui.h>
 #include <emux51.h>
 #include <hex.h>
+
+#ifndef EMUX51_GLADE_FILE
+	#define EMUX51_GLADE_FILE	"emux51.glade"
+#endif
 
 GtkWidget *about_dialog;
 GtkWidget *window;
@@ -31,9 +33,22 @@ GtkWidget *freq_label;
 GtkWidget *run_pause_button;
 GtkWidget *stop_button;
 
+/*
 GtkWidget *int_textview;
 GtkTextBuffer *int_textbuffer;
+*/
 
+GtkWidget *label_p[4];
+GtkWidget *label_tcon;
+GtkWidget *label_tmod;
+GtkWidget *label_thl0;
+GtkWidget *label_thl1;
+
+GtkWidget *label_psw;
+GtkWidget *label_acc;
+GtkWidget *label_b;
+GtkWidget *label_ie;
+GtkWidget *label_ip;
 
 char last_module_dir[PATH_MAX];
 char *hex_file;
@@ -228,10 +243,12 @@ void file_load_module(void *data)
 			printf("[emux51]\tcan't load module\n");
 		} else {
 			printf("[emux51]\tmodule loaded.\n");
-		}
-		if (dir == NULL || strcmp(newdir, dir)) {
-			g_setenv("module_dir", newdir, 1);
-			config_save();
+//			printf("dir == %s\nnewdir == %s\n", dir, newdir);
+			/*	save current folder	*/
+			if (dir != NULL && strcmp(newdir, dir)) {
+				g_setenv("module_dir", newdir, 1);
+				config_save();
+			}
 		}
 	}
 	gtk_widget_destroy(dialog);
@@ -357,7 +374,7 @@ static void data_dump(char *buffer)
 }
 static void reg_dump(char *buffer)
 {
-	sprintf(buffer, "Acc\t%02Xh\n"
+/*	sprintf(buffer, "Acc\t%02Xh\n"
 			"B\t%02Xh\n"
 			"PC\t%04Xh\n"
 			"P0\t%02Xh\t\t"
@@ -372,12 +389,84 @@ static void reg_dump(char *buffer)
 			sfr_memory[0xA0]&0xFF,
 			sfr_memory[0xB0]&0xFF
 			);
+*/
+	sprintf(buffer,
+		"Acc:%02Xh\t\tTH0:%02Xh\tTL0:%02X\tP0:\t%02Xh\n"
+		"B:  %02Xh\t\tTH1:%02Xh\tTL1:%02X\tP1:\t%02Xh\n"
+		"SP:%02Xh\t\tIE:%02X\tIP:%02X\tP2:\t%02Xh\n"
+		"PC:%04Xh\tDPTR:%04Xh\tPSW:%02X\tP3:\t%02Xh",
+
+//		"Acc:%02Xh\t\tTH0:\t%02Xh\tTL0:\t%02X\tP0:\t%02Xh\n"
+//		"B:%02Xh\t\tTH1:\t%02Xh\tTL1:\t%02X\tP1:\t%02Xh\n"
+//		"SP:\t%02Xh\t\tIE:\t%02X\tIP:\t%02X\tP2:\t%02Xh\n"
+//		"PC:\t%04Xh\tDPTR:\t%04Xh\tPSW:\t%02X\tP3:\t%02Xh",
+
+		sfr_memory[Acc]&0xFF, sfr_memory[TH0]&0xFF,
+		sfr_memory[TL0]&0xFF, sfr_memory[0x80]&0xFF,
+		sfr_memory[B_reg]&0xFF, sfr_memory[TH1]&0xFF,
+		sfr_memory[TL1]&0xFF, sfr_memory[0x90]&0xFF,
+		sfr_memory[SP]&0xFF, sfr_memory[IE]&0xFF,
+		sfr_memory[IP]&0xFF, sfr_memory[0xA0]&0xFF,
+		PC&0xFFFF,(sfr_memory[DPH]<<8|sfr_memory[DPL])&0xFFFF,
+		sfr_memory[PSW]&0xFF, sfr_memory[0xB0]&0xFF
+	);
 }
 
 void dump_close()
 {
 	gtk_check_menu_item_set_active(
 		GTK_CHECK_MENU_ITEM(menu_view_dump), 0);
+}
+
+void dump_ports(void)
+{
+	int i;
+	char buff[20];
+
+	for (i=0; i<4; i++) {
+		sprintf(buff, "P%d:\t%02Xh", i, sfr_memory[0x80+i*0x10]);
+		gtk_label_set_text(GTK_LABEL(label_p[i]), buff);
+	}
+}
+
+void dump_timers(void)
+{
+	char buff[20];
+
+	sprintf(buff, "TCON:\t%02Xh", sfr_memory[TCON]&0xFF);
+	gtk_label_set_text(GTK_LABEL(label_tcon), buff);
+
+	sprintf(buff, "TMOD:\t%02Xh", sfr_memory[TMOD]&0xFF);
+	gtk_label_set_text(GTK_LABEL(label_tmod), buff);
+
+	sprintf(buff, "TH0,TL0:\t%04Xh", (sfr_memory[TH0]<<8 | sfr_memory[TL0])&0xFFFF);
+	gtk_label_set_text(GTK_LABEL(label_thl0), buff);
+
+	sprintf(buff, "TH1,TL1:\t%04Xh", (sfr_memory[TH1]<<8 | sfr_memory[TL1])&0xFFFF);
+	gtk_label_set_text(GTK_LABEL(label_thl1), buff);
+
+
+}
+
+void dump_registers(void)
+{
+	char buff[20];
+
+	sprintf(buff, "Acc:\t%02Xh", sfr_memory[Acc]&0xFF);
+	gtk_label_set_text(GTK_LABEL(label_acc), buff);
+
+	sprintf(buff, "B:\t%02Xh", sfr_memory[B_reg]&0xFF);
+	gtk_label_set_text(GTK_LABEL(label_b), buff);
+
+	sprintf(buff, "IE:\t%02Xh", sfr_memory[IE]&0xFF);
+	gtk_label_set_text(GTK_LABEL(label_ie), buff);
+
+	sprintf(buff, "IP:\t%02Xh", sfr_memory[IP]&0xFF);
+	gtk_label_set_text(GTK_LABEL(label_ip), buff);
+
+	sprintf(buff, "psw:\t%02Xh", sfr_memory[PSW]&0xFF);
+	gtk_label_set_text(GTK_LABEL(label_psw), buff);
+
 }
 
 void refresh_dump(void)
@@ -392,6 +481,10 @@ void refresh_dump(void)
 	memset(buffer,0,sizeof(buffer));
 	reg_dump(buffer);
 	gtk_label_set_text(GTK_LABEL(reg_dump_label), buffer);
+
+	dump_ports();
+	dump_timers();
+	dump_registers();
 	
 }
 
@@ -443,17 +536,7 @@ void view_dump_toggled(GtkWidget *button)
 
 void int_log_append(const char *str)
 {
-	GtkTextMark *end;
-	GtkTextIter *iter;
-//	printf("appending: %s\n", str);
-
-//	gtk_text_buffer_get_end_iter(int_textbuffer, &iter);
-//	gtk_text_buffer_insert_at_cursor(int_textbuffer,str, -1);
-//	gtk_text_buffer_insert(int_textbuffer, &iter,str,-1);
-
-
-//	gtk_text_view_scroll_mark_onscreen(int_textview, end);
-
+	//printf("%s\n", str);
 }
 
 /*	starts gui	*/
@@ -465,7 +548,9 @@ int gui_run(int *argc, char **argv[])
 	gtk_init(argc, argv);
 
 	builder=gtk_builder_new();
-	gtk_builder_add_from_file(builder,"emux.glade", &error);
+//	gtk_builder_add_from_file(builder,"emux.glade", &error);
+	gtk_builder_add_from_file(builder, EMUX51_GLADE_FILE, &error);
+	
 	if (error){
 		printf("[emux51]\tgtk builder error: %s\n", error->message);
 		exit(1);
@@ -502,12 +587,44 @@ int gui_run(int *argc, char **argv[])
 
 	stop_button	= GTK_WIDGET(gtk_builder_get_object
 			(builder, "tool_stop"		));
-
+/*
 	int_textview	= GTK_WIDGET(gtk_builder_get_object
 			(builder, "interrupt_textview"));
 
 	int_textbuffer	= gtk_builder_get_object
 			(builder, "interrupt_textbuffer");	
+*/
+
+	label_p[0]	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_p0"));
+	label_p[1]	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_p1"));
+	label_p[2]	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_p2"));
+	label_p[3]	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_p3"));
+
+	label_thl0	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_thl0"));
+	label_thl1	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_thl1"));
+	label_tmod	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_tmod"));
+	label_tcon	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_tcon"));
+
+	label_ie	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_ie"));
+	label_ip	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_ip"));
+	label_acc	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_acc"));
+	label_b 	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_b"));
+	label_psw	= GTK_WIDGET(gtk_builder_get_object
+			(builder, "label_psw"));
+
+
 
 	gtk_builder_connect_signals(builder, NULL);
 	g_object_unref(builder);
@@ -530,7 +647,7 @@ void gui_callback(void)
 	gui_counter++;
 }
 
-/*	TODO: remove	*/
+/*	TODO: remove	??	*/
 static gboolean 
 gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * module)
 {
@@ -539,7 +656,6 @@ gui_module_delete_event(GtkWidget *widget, GdkEvent *event, void * module)
 }
 
 /*	add module into GUI scheme	*/
-/*	TODO: remove	*/
 void * do_gui_add(void *object, void *module, const char *title)
 {
 	GtkWidget *window;
@@ -547,6 +663,7 @@ void * do_gui_add(void *object, void *module, const char *title)
 	window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(window), title);
 	gtk_container_add(GTK_CONTAINER(window), object);
+	gtk_container_set_border_width(GTK_CONTAINER(window), 2);
 	g_signal_connect(window, "delete-event",
 			G_CALLBACK(gui_module_delete_event), module);
 
@@ -555,7 +672,7 @@ void * do_gui_add(void *object, void *module, const char *title)
 
 	return window;
 }
-/*	TODO: remove	*/
+
 void do_gui_remove(void *window)
 {
 	gtk_widget_destroy(window);

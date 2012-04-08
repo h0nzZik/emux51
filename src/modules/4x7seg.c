@@ -72,6 +72,24 @@ void import_segments(instance *self)
 	self->mask=mask;
 }
 
+
+int module_reset(instance *self)
+{
+	int i;
+	for (i=0; i<4; i++) {
+		seven_seg_set_segments(self->ssegs[i], 0);
+		self->lighting_segments[i]=0x00;
+		self->history[i]=0;
+	}
+	self->mask=0xFF;
+	sync_timer_unlink(self->event);
+	sync_timer_add(self->event, 40);
+
+	return 0;
+}
+
+
+
 void module_read(instance *self, int port)
 {
 	if (port != self->port_no)
@@ -117,7 +135,7 @@ int module_init(instance *self)
 
 	for(i=0; i<4; i++) {
 		self->ssegs[i]=seven_seg_new();
-		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 10);
+		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 5);
 	}
 
 	self->event=timer_event_alloc(self, M_QUEUE(off_handler), NULL);
@@ -143,5 +161,6 @@ module_info_t module_info={
 	M_INIT		(module_init),
 	M_EXIT		(module_exit),
 	M_PORT_CHANGED	(module_read),
+	M_RESET		(module_reset),
 };
 

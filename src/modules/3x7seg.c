@@ -80,22 +80,34 @@ void module_read(instance *self, int port)
 	import_segments(self);
 }
 
+int module_reset(instance *self)
+{
+	int i;
+	for (i=0; i<3; i++) {
+		seven_seg_set_segments(self->ssegs[i], 0);
+		self->lighting_segments[i]=0x00;
+		self->history[i]=0;
+	}
+	self->mask=0xFF;
+	sync_timer_unlink(self->event);
+	sync_timer_add(self->event, 40);
+
+	return 0;
+}
+
+
 /*	handler of "port-select" signal	*/
 static void port_select(PortSelector *ps, instance *self)
 {
 	int i;
 	self->port_no=port_selector_get_port(ps);
 	printf("port select %d\n", self->port_no);
-	memset(self->lighting_segments, 0, sizeof(self->lighting_segments));
 
-	/*	it was turned off	*/
-	for(i=0; i<3; i++){
-		seven_seg_set_segments(self->ssegs[i], 0);
-	}
-	self->mask=0xFF;
+	module_reset(self);
 	/*	redraw	*/
 	import_segments(self);
 }
+
 
 int module_init(instance *self)
 {
@@ -116,13 +128,11 @@ int module_init(instance *self)
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(hbox), select, FALSE, FALSE, 0);
-//	gtk_container_set_border_width(GTK_CONTAINER(hbox), 10);
+	
 	for(i=0; i<3; i++) {
 		self->ssegs[i]=seven_seg_new();
-//		tmpbox=gtk_vbox_new(FALSE,0);
-//		gtk_container_set_border_width(GTK_CONTAINER(tmpbox), 10);
-		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 0);
-//		gtk_box_pack_start(GTK_BOX(hbox), tmpbox, FALSE, FALSE, 0);
+		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 5);
+
 	}
 
 	/*	allocate timer event	*/
@@ -151,5 +161,6 @@ module_info_t module_info={
 	M_INIT		(module_init),
 	M_EXIT		(module_exit),
 	M_PORT_CHANGED	(module_read),
+	M_RESET		(module_reset),
 };
 

@@ -68,6 +68,17 @@ static void port_select(PortSelector *ps, inst_t *self)
 	
 }
 
+int switch_reset(inst_t *self)
+{
+	int i;
+
+	for (i=0; i<8; i++) {
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(self->check_buttons[i]), TRUE);
+	}
+	self->ext_state=0xFF;
+	return 0;
+}
+
 int module_init(inst_t *self)
 {
 	int j;
@@ -132,4 +143,5 @@ module_info_t module_info={
 	M_INIT		(module_init),
 	M_EXIT		(module_exit),
 	NULL,
+	M_RESET		(switch_reset),
 };
