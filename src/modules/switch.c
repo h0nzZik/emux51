@@ -7,15 +7,15 @@
 #include <widgets/port_selector.h>
 
 typedef struct {
-	int id;
+	module_base_t base;
 
 	int port;
 	int ext_state;
 	GtkWidget *window;
 	GtkWidget *check_buttons[8];
-} inst_t;
+} Switch;
 
-static void toggled(GtkToggleButton *button, inst_t *self)
+static void toggled(GtkToggleButton *button, Switch *self)
 {
 	int active;
 	int bit;
@@ -40,7 +40,7 @@ static void toggled(GtkToggleButton *button, inst_t *self)
 }
 
 
-static void port_select(PortSelector *ps, inst_t *self)
+static void port_select(PortSelector *ps, Switch *self)
 {
 	char port;
 	int i;
@@ -49,9 +49,9 @@ static void port_select(PortSelector *ps, inst_t *self)
 	if (port == self->port)
 		return;
 
-	printf("[switch:%d]\tport %d was selected\n", self->id, port);
+	printf("[switch:%d]\tport %d was selected\n", *(int *)self, port);
 	if (alloc_bits(self, port, 0xFF)){
-		printf("[switch:%d]\tcan't allocate port %d\n", self->id, port);
+		printf("[switch:%d]\tcan't allocate port %d\n", *(int *)self, port);
 		port_selector_set_port(ps, self->port);
 		return;
 	}
@@ -68,7 +68,7 @@ static void port_select(PortSelector *ps, inst_t *self)
 	
 }
 
-int switch_reset(inst_t *self)
+int switch_reset(Switch *self)
 {
 	int i;
 
@@ -79,7 +79,7 @@ int switch_reset(inst_t *self)
 	return 0;
 }
 
-int module_init(inst_t *self)
+int module_init(Switch *self)
 {
 	int j;
 
@@ -115,14 +115,14 @@ int module_init(inst_t *self)
 	/*	try to find empty port	*/
 	for(j=0; j<4; j++) {
 		if (alloc_bits(self, j, 0xFF) == 0){
-			printf("[switch:%d]\tusing port %d\n", self->id, j);
+			printf("[switch:%d]\tusing port %d\n", *(int *)self, j);
 			self->port=j;
 			port_selector_set_port(PORT_SELECTOR(select), j);
 			break;
 		}
 	}
 	if (j == 4) {
-		fprintf(stderr, "[switch:%d]\tno empty port found\n", self->id);
+		fprintf(stderr, "[switch:%d]\tno empty port found\n", *(int *)self);
 		return -1;
 	}
 	gtk_widget_show_all(main_box);
@@ -130,18 +130,21 @@ int module_init(inst_t *self)
 	return 0;
 }
 
-void module_exit(inst_t *self, const char *str)
+void module_exit(Switch *self, const char *str)
 {
-	printf("[switch:%d] exiting because of %s\n", self->id, str);
+	printf("[switch:%d] exiting because of %s\n", *(int *)self, str);
 
 	gui_remove(self->window);
 }
 
-module_info_t module_info={
-	"switch panel",
-	M_SPACE_SIZE	(sizeof(inst_t)),
-	M_INIT		(module_init),
-	M_EXIT		(module_exit),
-	NULL,
-	M_RESET		(switch_reset),
+module_info_t modules[]=
+{
+	{ "switch panel",
+		M_SPACE_SIZE	(sizeof(Switch)),
+		M_INIT		(module_init),
+		M_EXIT		(module_exit),
+		M_PORT_CHANGED	(NULL),
+		M_RESET		(switch_reset),
+	},
+	{ NULL }
 };

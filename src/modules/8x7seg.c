@@ -20,12 +20,12 @@ typedef struct {
 	GtkWidget *window;
 	GtkWidget *ssegs[8];
 	void *event;
-} instance;
+} Display8x7segMX;
 
 
 
 
-void off_handler(instance *self, void *data)
+void off_handler(Display8x7segMX *self, void *data)
 {
 	int i;
 
@@ -46,7 +46,7 @@ void off_handler(instance *self, void *data)
 /*	inverted decode array	*/
 const char decode_arr[16]={0x40, 0x79, 0x24, 0x30, 0x19, 0x12, 0x02,
 		0x78, 0x00, 0x10, 0x08, 0x03, 0x46, 0x21, 0x06, 0x0E};
-void import_segments(instance *self)
+void import_segments(Display8x7segMX *self)
 {
 	char data;
 	char lighting;
@@ -64,7 +64,7 @@ void import_segments(instance *self)
 	seven_seg_set_segments(self->ssegs[select], lighting);
 }
 
-void module_read(instance *self, int port)
+void module_read(Display8x7segMX *self, int port)
 {
 	if (port != self->port_no)
 		return;
@@ -72,11 +72,12 @@ void module_read(instance *self, int port)
 }
 
 /*	handler of "port-select" signal	*/
-static void port_select(PortSelector *ps, instance *self)
+static void port_select(PortSelector *ps, Display8x7segMX *self)
 {
 	int i;
-
+	unwatch_port(self, self->port_no);
 	self->port_no=port_selector_get_port(ps);
+	watch_port(self, self->port_no);
 
 	/*	it was turned off	*/
 	for(i=0; i<8; i++){
@@ -87,7 +88,7 @@ static void port_select(PortSelector *ps, instance *self)
 }
 
 
-int module_reset(instance *self)
+int module_reset(Display8x7segMX *self)
 {
 	int i;
 	for (i=0; i<8; i++) {
@@ -102,13 +103,15 @@ int module_reset(instance *self)
 
 
 
-int module_init(instance *self)
+int module_init(Display8x7segMX *self)
 {
 	/*	init module	*/
 	int i;
 
 	GtkWidget *hbox;
 	GtkWidget *select;
+
+	watch_port(self, self->port_no);
 
 	/*	init gui	*/
 	hbox=gtk_hbox_new(FALSE, 0);
@@ -133,19 +136,23 @@ int module_init(instance *self)
 	self->window=gui_add(hbox, self, "8x7seg panel");
 	return 0;
 }
-int module_exit(instance *self, const char *str)
+int module_exit(Display8x7segMX *self, const char *str)
 {
 	printf("[4x7seg:%d]\texiting because of %s\n", self->id, str);
+	unwatch_port(self, self->port_no);
 	gui_remove(self->window);
 	return 0;
 }
 
-module_info_t module_info={
-	"8x7seg panel",
-	M_SPACE_SIZE	(sizeof(instance)),
-	M_INIT		(module_init),
-	M_EXIT		(module_exit),
-	M_PORT_CHANGED	(module_read),
-	M_RESET		(module_reset),
+module_info_t modules[]=
+{
+	{ "8x7seg panel",
+		M_SPACE_SIZE	(sizeof(Display8x7segMX)),
+		M_INIT		(module_init),
+		M_EXIT		(module_exit),
+		M_PORT_CHANGED	(module_read),
+		M_RESET		(module_reset),
+	},
+	{ NULL }
 };
 

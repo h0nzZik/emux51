@@ -24,11 +24,11 @@ typedef struct {
 	int history[5];
 	GtkWidget *leds[5][7];
 	GtkWidget *window;
-} instance;
+} Display5x7dot;
 
 
 
-void column_set_off(instance *self, int column)
+void column_set_off(Display5x7dot *self, int column)
 {
 	int i;
 	for (i=0; i<7; i++) {
@@ -37,7 +37,7 @@ void column_set_off(instance *self, int column)
 }
 
 
-void off_handler(instance *self, void *data)
+void off_handler(Display5x7dot *self, void *data)
 {
 	int i;
 	for(i=0; i<5; i++){
@@ -52,7 +52,7 @@ void off_handler(instance *self, void *data)
 	sync_timer_add(self->off_event, 40);
 }
 
-void reset_display(instance *self)
+void reset_display(Display5x7dot *self)
 {
 	int i;
 	for (i=0; i<5; i++){
@@ -68,13 +68,13 @@ void reset_display(instance *self)
 }
 
 
-void reset_handler(instance *self, void *data)
+void reset_handler(Display5x7dot *self, void *data)
 {
 	self->column=0;
 
 }
 
-static void update(instance *self)
+static void update(Display5x7dot *self)
 {
 	char data;
 	int i;
@@ -105,21 +105,23 @@ static void update(instance *self)
 }
 
 
-static void port_select(PortSelector *ps, instance *self)
+static void port_select(PortSelector *ps, Display5x7dot *self)
 {
+	unwatch_port(self, self->port);
 	self->port=port_selector_get_port(ps);
+	watch_port(self, self->port);
 	reset_display(self);
 	update(self);
 }
 
 
-void module_read(instance *self, int port)
+void module_read(Display5x7dot *self, int port)
 {
 	update(self);
 }
 
 /*
-int module_reset(instance *self)
+int module_reset(Display5x7dot *self)
 {
 	int i,j;
 
@@ -142,7 +144,7 @@ int module_reset(instance *self)
 	return 0;
 }
 */
-int module_init(instance *self)
+int module_init(Display5x7dot *self)
 {
 	int i,j;
 	float c[3];
@@ -154,6 +156,8 @@ int module_init(instance *self)
 	self->last_data=0xFF;
 	self->column=0;
 
+
+	watch_port(self, 0);
 
 	vbox=gtk_vbox_new(FALSE, 0);
 
@@ -204,7 +208,7 @@ int module_init(instance *self)
 
 
 
-void module_exit(instance *self, char *reason)
+void module_exit(Display5x7dot *self, char *reason)
 {
 	int i,j;
 	printf("[5x7:%d]\texiting: %s.\n",self->id, reason);
@@ -218,18 +222,21 @@ void module_exit(instance *self, char *reason)
 
 	sync_timer_unlink(self->reset_event);
 	g_free(self->reset_event);	
-		
+	unwatch_port(self, self->port);	
 
 	gui_remove(self->window);
 	
 }
 
 
-module_info_t module_info={
-	"5x7 matrix display",
-	M_SPACE_SIZE	(sizeof(instance)),
-	M_INIT		(module_init),
-	M_EXIT		(module_exit),
-	M_PORT_CHANGED	(module_read),
-	M_RESET		(reset_display),
+module_info_t modules[]=
+{
+	{ "5x7 matrix display",
+		M_SPACE_SIZE	(sizeof(Display5x7dot)),
+		M_INIT		(module_init),
+		M_EXIT		(module_exit),
+		M_PORT_CHANGED	(module_read),
+		M_RESET		(reset_display),
+	},
+	{ NULL }
 };

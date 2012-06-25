@@ -11,17 +11,17 @@
 #include <widgets/led.h>
 
 typedef struct {
-	int id;
+	module_base_t base;
 
 	GtkWidget *window;
 	GtkWidget *leds[8];
 	int invert;
 	char port_data;
 	char port;
-}instance_t;
+}LedPanel;
 
 
-static void update_leds(instance_t *self)
+static void update_leds(LedPanel *self)
 {
 	int i;
 	char data;
@@ -36,7 +36,7 @@ static void update_leds(instance_t *self)
 	}
 }
 
-static void module_read(instance_t *self, int port)
+static void module_read(LedPanel *self, int port)
 {
 	if (port != self->port)
 		return;
@@ -47,28 +47,31 @@ static void module_read(instance_t *self, int port)
 	update_leds(self);
 }
 
-static void port_select(PortSelector *ps, instance_t *self)
+static void port_select(PortSelector *ps, LedPanel *self)
 {
+	unwatch_port(self, self->port);
 	self->port=port_selector_get_port(ps);
 
 	if (read_port(self, self->port, &self->port_data)) {
 		printf("[led]\tcan't read port\n");
 	}
+	watch_port(self, self->port);
 	update_leds(self);
 }
 
 
-void module_exit(instance_t *self, char *reason)
+void module_exit(LedPanel *self, char *reason)
 {
 	int i;
-	printf("[led:%d]\texiting: %s.\n",self->id, reason);
+	printf("[led:%d]\texiting: %s.\n",*(int *)self, reason);
 	for (i=0; i<8; i++) {
 		gtk_widget_destroy(self->leds[i]);
 	}
+	unwatch_port(self, self->port);
 	gui_remove(self->window);
 }
 
-int module_init(instance_t *self)
+int module_init(LedPanel *self)
 {
 	int i;
 	float c[3];
@@ -80,6 +83,7 @@ int module_init(instance_t *self)
 
 	self->invert=1;
 
+	watch_port(self, 0);
 
 	/*	create main box with port selector..	*/
 	vbox=gtk_vbox_new(FALSE, 0);
@@ -126,11 +130,15 @@ int module_init(instance_t *self)
 }
 
 
-module_info_t module_info={
-	"LED panel",
-	M_SPACE_SIZE	(sizeof(instance_t)),
-	M_INIT		(module_init),
-	M_EXIT		(module_exit),
-	M_PORT_CHANGED	(module_read),
+module_info_t modules[]=
+{
+	{ "LED panel",
+		M_SPACE_SIZE	(sizeof(LedPanel)),
+		M_INIT		(module_init),
+		M_EXIT		(module_exit),
+		M_PORT_CHANGED	(module_read),
+		M_RESET		(NULL)
+	},
+	{ NULL }
 };
 

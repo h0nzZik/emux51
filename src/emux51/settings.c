@@ -19,9 +19,7 @@
 #endif
 #define STRLEN(s) (sizeof(s)/sizeof(s[0]))
 
-const char *known_vars[]={ "module_dir", "hex_dir", NULL };
-
-//char _configfile[PATH_MAX+3+STRLEN(CFGNAME)+STRLEN(CFGDIR)];
+const char *known_vars[]={"hex_dir", NULL };
 
 char *configfile(void)
 {
@@ -49,8 +47,12 @@ int config_parse(void)
 	FILE *fr;
 
 	fr=g_fopen(configfile(), "rt");
-	if (fr == NULL)
+	if (fr == NULL){
+		#ifdef DEFAULT_MODULE_PATH
+		g_setenv("module_dir", DEFAULT_MODULE_PATH,0);
+		#endif
 		return -1;
+	}
 
 	 while(1){
 		buff=g_malloc(80);

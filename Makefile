@@ -2,45 +2,66 @@
 
 PROGRAM=emux51
 
+ifndef PREFIX
+	PREFIX=/usr
+endif
+
 ifeq (${arch}, windows)
-	PREFIX		= i686-pc-mingw32-
+	BPREFIX		= i686-pc-mingw32-
 	OUTDIR		= out/windows
 	SHARED_EXT	= .dll
 	EXECUTABLE_EXT	= .exe
 	ARCH_LDFLAGS	= -lwinmm -mwindows
 	PIC		=
 	HOME_VAR	= USERPROFILE
-	USER_DEFINES	= -D PORTABLE
+#	ARCH_DEFINES	= -D PORTABLE
+
+	BIN_PATH	= .
+	LIB_PATH	= .
+	DATA_PATH	= .
 else
 	arch		= nixies
-	PREFIX		=
+	BPREFIX		=
 	OUTDIR		= out/nixies
 	SHARED_EXT	= .so
 	EXECUTABLE_EXT	=
 	ARCH_LDFLAGS	= -export-dynamic
 	PIC		= -fPIC
 	HOME_VAR	= HOME
+	
+	BIN_PATH	= ${PREFIX}/bin
+	LIB_PATH	= ${PREFIX}/lib
+	DATA_PATH	= ${PREFIX}/share
 endif
 
 ifndef (${GLADE_FILE})
-	GLADE_FILE=emux.glade
+	GLADE_FILE=emux51.glade
 endif
 
-PKG_CONFIG	= ${PREFIX}pkg-config
-CC		= ${PREFIX}gcc
+
+MODULE_PATH	= ${LIB_PATH}/emux51-modules
+MODULE_REGEX	= "^[a-zA-Z0-9].*"${SHARED_EXT}"$$"
+
+PKG_CONFIG	= ${BPREFIX}pkg-config
+CC		= ${BPREFIX}gcc
+
 OUT		= ${OUTDIR}/${PROGRAM}${EXECUTABLE_EXT}
-MODULE_OUT	= ${OUTDIR}/modules
+MODULE_OUT	= ${OUTDIR}/emux51-modules
 GENERAL_CFLAGS	= -c -Wall -O2 -Wformat
 
 
-GTK_NEW_DEFINIES= -D GTK_DISABLE_SINGLE_INCLUDES	\
+
+GTK_NEW_DEFINES	= -D GTK_DISABLE_SINGLE_INCLUDES	\
 		  -D GDK_DISABLE_DEPRECATED		\
 		  -D GTK_DISABLE_DEPRECATED
 
-DEFINES		= -D MODULE_EXTENSION=\"${SHARED_EXT}\"	\
-		  -D HOME_VAR=\"${HOME_VAR}\"		\
-		  -D EMUX51_GLADE_FILE=\"${GLADE_FILE}\"\
-		  ${GTK_NEW_DEFINES}
+DEFINES		= -D MODULE_EXTENSION=\"${SHARED_EXT}\"		\
+		  -D HOME_VAR=\"${HOME_VAR}\"			\
+		  -D MODULE_REGEX=\"${MODULE_REGEX}\"	\
+		  -D UI_FILE=\"${GLADE_FILE}\"	\
+		  -D MODULE_DIR=\"${MODULE_PATH}\"		\
+		  ${GTK_NEW_DEFINES}				\
+		  ${DEBUG_DEFINES}
 
 INCLUDE		= -I include
 
@@ -53,7 +74,7 @@ LDFLAGS		= ${GTK_LDFLAGS}		\
 CFLAGS		= ${GENERAL_CFLAGS}		\
 		  ${GTK_CFLAGS}			\
 		  ${DEFINES}			\
-		  ${USER_DEFINES}
+		  ${ARCH_DEFINES}
 
 
 MODULES_CFLAGS	= -D BUILDING_MODULE		\
@@ -66,7 +87,7 @@ OBJ		= .obj/${arch}
 
 
 
-#	FILES
+#	Files to compile
 
 archtarget	= ${arch}
 
@@ -105,21 +126,16 @@ modules		= 3x7seg.mod			\
 		  4x7seg.mod			\
 		  8x7seg.mod			\
 		  keyboard.mod			\
-		  hello.mod			\
 		  5x7matrix.mod			\
 		  5x7matrix-degraded.mod
 
-#.PHONY: clean
-#.PHONY: build_all
-#.PHONY: build
+#	Rules
 
 build_all: directory widgets build modules
 
-
 directory:
 	mkdir -p ${OBJ}/modules
-	mkdir -p ${OUTDIR}/modules
-
+	mkdir -p ${MODULE_OUT}
 
 build:	${targets} gui alarm
 	@ echo 'linking..'
@@ -159,10 +175,18 @@ clean:
 	rm -f ${OUTDIR}/modules/*${SHARED_EXT}
 
 install:
-	mkdir -p ${INSTALL_PREFIX}/bin
-	mkdir -p ${INSTALL_PREFIX}/lib/emux51-modules
-	mkdir -p ${INSTALL_PREFIX}/share/emux51
-	cp emux.glade ${INSTALL_PREFIX}/share/emux51/emux.glade
-	cp ${OUT} ${INSTALL_PREFIX}/bin
-	cp ${OUTDIR}/libemux_widgets${SHARED_EXT} ${INSTALL_PREFIX}/lib
-	cp -R ${OUTDIR}/modules/ ${INSTALL_PREFIX}/lib/emux51-modules
+	mkdir -p ${BIN_PATH}
+	mkdir -p ${LIB_PATH}/emux51-modules
+	mkdir -p ${DATA_PATH}/emux51
+	cp emux.glade ${DATA_PATH}/emux51
+	cp emux51.png ${DATA_PATH}/emux51
+	cp ${OUT} ${BIN_PATH}
+	cp ${OUTDIR}/libemux_widgets${SHARED_EXT} ${LIB_PATH}
+	cp -R ${OUTDIR}/modules/ ${LIB_PATH}/emux51-modules
+
+uninstall:
+	rm -r ${LIB_PATH}/emux51-modules
+	rm -r ${DATA_PATH}/emux51
+	rm ${LIB_PATH}/libemux_widgets${SHARED_EXT}
+	rm ${BIN_PATH}/emux51
+

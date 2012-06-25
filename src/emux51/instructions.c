@@ -872,7 +872,7 @@ void anl_addr_imm8(unsigned short idx)
 	mask=read_code(idx+2);
 	data=rmw_read(addr);
 	data&=mask;
-	write_data(addr, mask);
+	write_data(addr, data);
 	PC+=3;
 }
 void anl_c_addr(unsigned short idx)
@@ -1024,7 +1024,7 @@ void xrl_a_imm8(unsigned short idx)
 
 	a=read_Acc();
 	data=read_code(idx+1);
-	data^=a;
+	a^=data;
 	write_Acc(a);
 	PC+=2;
 }

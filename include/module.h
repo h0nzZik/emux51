@@ -23,6 +23,20 @@ typedef struct {
 } module_info_t;
 
 
+typedef struct {
+	char *path_name;
+	char *module_name;
+} module_list_entry_t;
+
+/*
+ *	Base module structure.
+ */
+typedef struct {
+	int id;
+	void *module;
+} module_base_t;
+
+
 
 
 #ifdef BUILDING_MODULE
@@ -44,22 +58,24 @@ void (*usec_timer_unlink)(void *entry)=NULL;
 void * (*gui_add)(void *object, void *delete_data, const char *title)=NULL;
 void (*gui_remove)(void *window);
 
+
+int (*watch_port)(void *self, unsigned int port);
+int (*unwatch_port)(void *self, unsigned int port);
+
 //#endif		//building module
 #else
 
 typedef struct {
-
 	GModule *module;
 	int id;
-	char mask[PORTS_CNT];
-//	char mask[4];	
+	char mask[PORTS_CNT];	
 	void *space;
 	module_info_t info;
 } module_t;
-
-
-int module_new(char *path);
+int module_new(const char *name, const char *path);
 int module_destroy(void *space, const char *reason);
+
+int module_load_by_name(const char *module_name);
 
 void module_export_port(int port);
 
@@ -70,6 +86,10 @@ void time_queue_perform(void);
 int modules_init(void);
 void module_destroy_all(const char *reason);
 void module_reset_all(void);
+
+int module_name_list_destroy(void);
+
+
 
 #endif
 

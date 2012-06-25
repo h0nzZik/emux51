@@ -11,8 +11,7 @@
 
 
 typedef struct {
-	int id;
-
+	module_base_t base;
 	int port_no;
 	char lighting_segments[3];
 	int history[3];
@@ -20,12 +19,12 @@ typedef struct {
 	GtkWidget *ssegs[3];
 	int mask;
 	void *event;
-} instance;
+} Display3x7seg;
 
 
 
 
-void off_handler(instance *self, void *data)
+void off_handler(Display3x7seg *self, void *data)
 {
 	int i;
 	for(i=0; i<3; i++){
@@ -46,7 +45,7 @@ void off_handler(instance *self, void *data)
 /*	inverted decode array	*/
 const char decode_arr[16]={0x40, 0x79, 0x24, 0x30, 0x19, 0x12, 0x02,
 		0x78, 0x00, 0x10, 0x08, 0x03, 0x46, 0x21, 0x06, 0x0E};
-void import_segments(instance *self)
+void import_segments(Display3x7seg *self)
 {
 	char data;
 	int value;
@@ -71,8 +70,7 @@ void import_segments(instance *self)
 	}
 	self->mask=mask;
 }
-
-void module_read(instance *self, int port)
+void module_read(Display3x7seg *self, int port)
 {
 	if (port != self->port_no) {
 		return;
@@ -80,7 +78,7 @@ void module_read(instance *self, int port)
 	import_segments(self);
 }
 
-int module_reset(instance *self)
+int module_reset(Display3x7seg *self)
 {
 	int i;
 	for (i=0; i<3; i++) {
@@ -97,19 +95,19 @@ int module_reset(instance *self)
 
 
 /*	handler of "port-select" signal	*/
-static void port_select(PortSelector *ps, instance *self)
+static void port_select(PortSelector *ps, Display3x7seg *self)
 {
 	int i;
+	unwatch_port(self, self->port_no);
 	self->port_no=port_selector_get_port(ps);
-	printf("port select %d\n", self->port_no);
-
+	watch_port(self, self->port_no);
 	module_reset(self);
 	/*	redraw	*/
 	import_segments(self);
 }
 
 
-int module_init(instance *self)
+int module_init(Display3x7seg *self)
 {
 	/*	init module	*/
 	int i;
@@ -128,7 +126,8 @@ int module_init(instance *self)
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(hbox), select, FALSE, FALSE, 0);
-	
+	watch_port(self, 0);
+
 	for(i=0; i<3; i++) {
 		self->ssegs[i]=seven_seg_new();
 		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 5);
@@ -141,26 +140,29 @@ int module_init(instance *self)
 		return 1;
 	}
 	sync_timer_add(self->event, 40);
-	
+
 	gtk_widget_show_all(hbox);
 	self->window=gui_add(hbox, self, "3x7seg panel");
 	return 0;
 }
-int module_exit(instance *self, const char *str)
+int module_exit(Display3x7seg *self, const char *str)
 {
-	printf("[3x7seg:%d]\texiting because of %s\n", self->id, str);
+	printf("[3x7seg:%d]\texiting because of %s\n", *(int *)self, str);
 	sync_timer_unlink(self->event);
 	g_free(self->event);
+	unwatch_port(self, self->port_no);
 	gui_remove(self->window);
 	return 0;
 }
 
-module_info_t module_info={
-	"3x7seg panel",
-	M_SPACE_SIZE	(sizeof(instance)),
-	M_INIT		(module_init),
-	M_EXIT		(module_exit),
-	M_PORT_CHANGED	(module_read),
-	M_RESET		(module_reset),
+module_info_t modules[]=
+{
+	{"3x7seg panel",
+		M_SPACE_SIZE	(sizeof(Display3x7seg)),
+		M_INIT		(module_init),
+		M_EXIT		(module_exit),
+		M_PORT_CHANGED	(module_read),
+		M_RESET		(module_reset),
+	},
+	{ NULL }
 };
-

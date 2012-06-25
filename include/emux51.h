@@ -90,16 +90,13 @@
 
 
 
-/*	control variables	*/
-
-/*	if set, emulator is 'exporting' port and nobody can write	*/
-extern int exporting;
+extern char *module_directory;
+extern char *ui_file;
 
 /*			*/
 extern volatile gint G_GNUC_MAY_ALIAS running;
 
 extern int loaded;
-//extern char hexfile[];
 extern int interrupt_state;
 
 extern unsigned char code_memory[CODE_LENGHT];
@@ -152,7 +149,6 @@ void jump_to(unsigned char addr);
 
 
 void do_reset(void);
-//void data_dump(char *buffer);
 
 /*	64K  code memory		*/
 extern unsigned char code_memory[];

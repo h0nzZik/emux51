@@ -24,6 +24,8 @@
 
 GtkWidget *about_dialog;
 GtkWidget *window;
+GtkWidget *module_list_window;
+GtkWidget *module_list_vbox;
 GtkWidget *menu_view_dump;
 GtkWidget *dump_window;
 GtkWidget *memory_dump_label;
@@ -50,6 +52,22 @@ GtkWidget *label_b;
 GtkWidget *label_ie;
 GtkWidget *label_ip;
 
+
+
+GtkListStore *module_name_list_store;
+extern GList *module_name_list;
+
+int module_do_lookup();
+
+
+enum
+{
+   MODULE_NAME_COLUMN,
+   N_COLUMNS
+};
+
+
+
 char last_module_dir[PATH_MAX];
 char *hex_file;
 
@@ -60,7 +78,7 @@ G_MODULE_EXPORT void emux51_run_pause();
 G_MODULE_EXPORT void dump_close();
 G_MODULE_EXPORT void file_load_hex();
 G_MODULE_EXPORT void file_reload_hex();
-G_MODULE_EXPORT void file_load_module();
+G_MODULE_EXPORT void tool_module_list_toggled();
 G_MODULE_EXPORT void view_dump_toggled();
 G_MODULE_EXPORT void about_clicked();
 G_MODULE_EXPORT void edit_change_frequency();
@@ -193,66 +211,30 @@ void file_reload_hex(void *data)
 	emux51_load_hex(hex_file);
 }
 
-
+#if 0
 /*	create 'Load module' dialog	*/
 void file_load_module(void *data)
 {
-	GtkWidget *dialog;
-	GtkFileFilter *filter;
-	char *fname;
-	int rval;
-	char *dir;
-	char *newdir;
-	char buff[20];
-
-	dialog=gtk_file_chooser_dialog_new("Select module", NULL,
-			GTK_FILE_CHOOSER_ACTION_OPEN,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-			GTK_STOCK_OPEN, GTK_RESPONSE_OK, NULL);
-	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
-	/*	create .dll or .so filter	*/
-	sprintf(buff, "*%s", MODULE_EXTENSION);
-	filter=gtk_file_filter_new();
-	gtk_file_filter_set_name(GTK_FILE_FILTER(filter), "Dynamic libraries");
-	gtk_file_filter_add_pattern(GTK_FILE_FILTER(filter), buff);
-	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), GTK_FILE_FILTER(filter));
-	/*	create all files filter	*/
-	filter=gtk_file_filter_new();
-	gtk_file_filter_set_name(GTK_FILE_FILTER(filter), "All files");
-	gtk_file_filter_add_pattern(GTK_FILE_FILTER(filter), "*");
-	gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), GTK_FILE_FILTER(filter));
-
-	
-	/*	try to set	*/
-	dir=getenv("module_dir");
-	if (dir){
-		gtk_file_chooser_set_current_folder
-			(GTK_FILE_CHOOSER(dialog), dir);
-	}
-
-	rval=gtk_dialog_run(GTK_DIALOG(dialog));
-	if (rval == GTK_RESPONSE_OK) {
-		fname=gtk_file_chooser_get_filename
-			(GTK_FILE_CHOOSER(dialog));
-
-		newdir=gtk_file_chooser_get_current_folder
-			(GTK_FILE_CHOOSER(dialog));
-
-		printf("[emux51]\tloading module <%s>\n", fname);
-		if(module_new(fname)) {
-			printf("[emux51]\tcan't load module\n");
-		} else {
-			printf("[emux51]\tmodule loaded.\n");
-//			printf("dir == %s\nnewdir == %s\n", dir, newdir);
-			/*	save current folder	*/
-			if (dir != NULL && strcmp(newdir, dir)) {
-				g_setenv("module_dir", newdir, 1);
-				config_save();
-			}
-		}
-	}
-	gtk_widget_destroy(dialog);
+	module_name_list_destroy();
 }
+#endif
+
+void tool_module_list_toggled(GtkWidget *button)
+{
+	if (gtk_toggle_tool_button_get_active
+	   (GTK_TOGGLE_TOOL_BUTTON(button)) == TRUE) {
+	   	module_do_lookup();
+		gtk_widget_show(module_list_window);
+	} else {
+		gtk_widget_hide(module_list_window);
+		module_name_list_destroy();
+	}
+}
+
+
+/*
+ *	Frequency settings
+ */
 
 /*	make string from frequency value	*/
 char *format_frequency(char *buff, unsigned long freq)
@@ -273,7 +255,7 @@ char *format_frequency(char *buff, unsigned long freq)
 	return buff;
 }
 
-/*	parse frequency value from string	*/
+/*	Gets frequency (in Hz) from string	*/
 unsigned long parse_frequency(const char *str)
 {
 	float freq=0;
@@ -350,6 +332,10 @@ void edit_change_frequency()
 
 }
 
+/*
+ *	Memory and SFR dump
+ */
+
 const char *dump_head=
 "--\t00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0A\t0B\t0C\t0D\t0E\t0F\n";
 
@@ -374,32 +360,12 @@ static void data_dump(char *buffer)
 }
 static void reg_dump(char *buffer)
 {
-/*	sprintf(buffer, "Acc\t%02Xh\n"
-			"B\t%02Xh\n"
-			"PC\t%04Xh\n"
-			"P0\t%02Xh\t\t"
-			"P1\t%02Xh\t\t"
-			"P2\t%02Xh\t\t"
-			"P3\t%02Xh\n",
-			sfr_memory[Acc]&0xFF,
-			sfr_memory[B_reg]&0xFF,
-			PC&0xFFFF,
-			sfr_memory[0x80]&0xFF,
-			sfr_memory[0x90]&0xFF,
-			sfr_memory[0xA0]&0xFF,
-			sfr_memory[0xB0]&0xFF
-			);
-*/
+
 	sprintf(buffer,
 		"Acc:%02Xh\t\tTH0:%02Xh\tTL0:%02X\tP0:\t%02Xh\n"
 		"B:  %02Xh\t\tTH1:%02Xh\tTL1:%02X\tP1:\t%02Xh\n"
 		"SP:%02Xh\t\tIE:%02X\tIP:%02X\tP2:\t%02Xh\n"
 		"PC:%04Xh\tDPTR:%04Xh\tPSW:%02X\tP3:\t%02Xh",
-
-//		"Acc:%02Xh\t\tTH0:\t%02Xh\tTL0:\t%02X\tP0:\t%02Xh\n"
-//		"B:%02Xh\t\tTH1:\t%02Xh\tTL1:\t%02X\tP1:\t%02Xh\n"
-//		"SP:\t%02Xh\t\tIE:\t%02X\tIP:\t%02X\tP2:\t%02Xh\n"
-//		"PC:\t%04Xh\tDPTR:\t%04Xh\tPSW:\t%02X\tP3:\t%02Xh",
 
 		sfr_memory[Acc]&0xFF, sfr_memory[TH0]&0xFF,
 		sfr_memory[TL0]&0xFF, sfr_memory[0x80]&0xFF,
@@ -488,6 +454,8 @@ void refresh_dump(void)
 	
 }
 
+
+
 void emux51_quit()
 {
 	printf("[emux51]\texiting\n");
@@ -534,6 +502,53 @@ void view_dump_toggled(GtkWidget *button)
 	}
 }
 
+void load_module_activated(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *column)
+{
+	GtkTreeSelection *select;
+	GtkTreeModel *model;
+	GtkTreeIter iter;
+	char *module_name;
+
+	select=gtk_tree_view_get_selection(GTK_TREE_VIEW(view));
+	if (gtk_tree_selection_get_selected(select, &model, &iter)) {
+		gtk_tree_model_get(model, &iter, MODULE_NAME_COLUMN , &module_name, -1);
+		printf("loading module %s\n", module_name);
+		module_load_by_name(module_name);
+		g_free(module_name);
+
+	}
+//	printf("loading module\n");
+}
+
+
+int gui_init_module(void)
+{
+
+	GtkWidget *tree;
+	GtkCellRenderer *renderer;
+	GtkTreeViewColumn *column;
+	GtkWidget *vbox;
+	GtkTreeSelection *select;
+
+	module_name_list=NULL;
+	module_name_list_store=gtk_list_store_new(N_COLUMNS, G_TYPE_STRING);
+
+
+	tree=gtk_tree_view_new_with_model(GTK_TREE_MODEL(module_name_list_store));
+	renderer=gtk_cell_renderer_text_new();
+	column=gtk_tree_view_column_new_with_attributes("Module name",
+							renderer,
+							"text",
+							MODULE_NAME_COLUMN,
+							NULL);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
+
+	g_signal_connect(G_OBJECT(tree), "row-activated", G_CALLBACK(load_module_activated), NULL);
+
+	gtk_box_pack_start(GTK_BOX(module_list_vbox), tree, FALSE, FALSE, 2);
+	gtk_widget_show_all(GTK_WIDGET(module_list_vbox));
+}
+
 void int_log_append(const char *str)
 {
 	//printf("%s\n", str);
@@ -548,11 +563,10 @@ int gui_run(int *argc, char **argv[])
 	gtk_init(argc, argv);
 
 	builder=gtk_builder_new();
-//	gtk_builder_add_from_file(builder,"emux.glade", &error);
-	gtk_builder_add_from_file(builder, EMUX51_GLADE_FILE, &error);
+	gtk_builder_add_from_file(builder, ui_file, &error);
 	
 	if (error){
-		printf("[emux51]\tgtk builder error: %s\n", error->message);
+		g_print("[emux51]\tgtk builder error: %s\n", error->message);
 		exit(1);
 	}
 	
@@ -587,13 +601,6 @@ int gui_run(int *argc, char **argv[])
 
 	stop_button	= GTK_WIDGET(gtk_builder_get_object
 			(builder, "tool_stop"		));
-/*
-	int_textview	= GTK_WIDGET(gtk_builder_get_object
-			(builder, "interrupt_textview"));
-
-	int_textbuffer	= gtk_builder_get_object
-			(builder, "interrupt_textbuffer");	
-*/
 
 	label_p[0]	= GTK_WIDGET(gtk_builder_get_object
 			(builder, "label_p0"));
@@ -624,12 +631,18 @@ int gui_run(int *argc, char **argv[])
 	label_psw	= GTK_WIDGET(gtk_builder_get_object
 			(builder, "label_psw"));
 
+	module_list_window	= gtk_builder_get_object (builder, "module_list_window");
+	module_list_vbox	= gtk_builder_get_object (builder, "module_list_vbox");
 
 
 	gtk_builder_connect_signals(builder, NULL);
 	g_object_unref(builder);
 
+
+	gui_init_module();
+
 	gtk_widget_show(window);
+
 	printf("[emux51]\tentering to loop..\n");
 	gtk_main();
 	

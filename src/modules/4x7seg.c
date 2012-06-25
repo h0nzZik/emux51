@@ -11,7 +11,7 @@
 
 
 typedef struct {
-	int id;
+	module_base_t base;
 
 	int port_no;
 	char lighting_segments[4];
@@ -20,12 +20,12 @@ typedef struct {
 	GtkWidget *ssegs[4];
 	int mask;
 	void *event;
-} instance;
+} Display4x7seg;
 
 
 
 
-void off_handler(instance *self, void *data)
+void off_handler(Display4x7seg *self, void *data)
 {
 	int i;
 	for(i=0; i<4; i++){
@@ -46,7 +46,7 @@ void off_handler(instance *self, void *data)
 /*	inverted decode array	*/
 const char decode_arr[16]={0x40, 0x79, 0x24, 0x30, 0x19, 0x12, 0x02,
 		0x78, 0x00, 0x10, 0x08, 0x03, 0x46, 0x21, 0x06, 0x0E};
-void import_segments(instance *self)
+void import_segments(Display4x7seg *self)
 {
 	char data;
 	int value;
@@ -73,7 +73,7 @@ void import_segments(instance *self)
 }
 
 
-int module_reset(instance *self)
+int module_reset(Display4x7seg *self)
 {
 	int i;
 	for (i=0; i<4; i++) {
@@ -90,7 +90,7 @@ int module_reset(instance *self)
 
 
 
-void module_read(instance *self, int port)
+void module_read(Display4x7seg *self, int port)
 {
 	if (port != self->port_no)
 		return;
@@ -98,23 +98,19 @@ void module_read(instance *self, int port)
 }
 
 /*	handler of "port-select" signal	*/
-static void port_select(PortSelector *ps, instance *self)
+static void port_select(PortSelector *ps, Display4x7seg *self)
 {
 	int i;
-
+	unwatch_port(self, self->port_no);
 	self->port_no=port_selector_get_port(ps);
-	memset(self->lighting_segments, 0, sizeof(self->lighting_segments));
+	watch_port(self, self->port_no);
+	module_reset(self);
 
-	/*	it was turned off	*/
-	for(i=0; i<4; i++){
-		seven_seg_set_segments(self->ssegs[i], 0);
-	}
-	self->mask=0xFF;
 	/*	redraw	*/
 	import_segments(self);
 }
 
-int module_init(instance *self)
+int module_init(Display4x7seg *self)
 {
 	/*	init module	*/
 	int i;
@@ -133,6 +129,8 @@ int module_init(instance *self)
 			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(hbox), select, FALSE, FALSE, 0);
 
+	watch_port(self, 0);
+
 	for(i=0; i<4; i++) {
 		self->ssegs[i]=seven_seg_new();
 		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 5);
@@ -148,19 +146,25 @@ int module_init(instance *self)
 	self->window=gui_add(hbox, self, "4x7seg panel");
 	return 0;
 }
-int module_exit(instance *self, const char *str)
+int module_exit(Display4x7seg *self, const char *str)
 {
-	printf("[4x7seg:%d]\texiting because of %s\n", self->id, str);
+	printf("[4x7seg:%d]\texiting because of %s\n", *(int *)self, str);
+	sync_timer_unlink(self->event);
+	g_free(self->event);
+	unwatch_port(self, self->port_no);	
 	gui_remove(self->window);
 	return 0;
 }
 
-module_info_t module_info={
-	"4x7seg panel",
-	M_SPACE_SIZE	(sizeof(instance)),
-	M_INIT		(module_init),
-	M_EXIT		(module_exit),
-	M_PORT_CHANGED	(module_read),
-	M_RESET		(module_reset),
+module_info_t modules[]=
+{
+	{ "4x7seg panel",
+		M_SPACE_SIZE	(sizeof(Display4x7seg)),
+		M_INIT		(module_init),
+		M_EXIT		(module_exit),
+		M_PORT_CHANGED	(module_read),
+		M_RESET		(module_reset),
+	},
+	{ NULL }
 };
 

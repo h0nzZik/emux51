@@ -12,12 +12,12 @@ typedef struct {
 
 	GtkWidget *window;
 	GtkWidget *buttons[12];
-} instance;
+} Key3x4;
 
 char *values[]={"1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"};
 
 
-static void key_update_port(instance *self)
+static void key_update_port(Key3x4 *self)
 {
 	int i,j;
 	char port_value;
@@ -47,13 +47,15 @@ static void key_update_port(instance *self)
 	self->writing=0;
 }
 
-static void select_port(PortSelector *ps, instance *self)
+static void select_port(PortSelector *ps, Key3x4 *self)
 {
 	int port;
 
 	port=port_selector_get_port(ps);
 	if (port == self->port_no)
 		return;
+	unwatch_port(self, self->port_no);
+	watch_port(self, port);
 
 	if (alloc_bits(self, port, 0xFF)){
 		printf("[kb3x4:%d]\tcan't allocate port %d\n", self->id, port);
@@ -72,7 +74,7 @@ static void select_port(PortSelector *ps, instance *self)
 
 
 
-static void port_changed(instance *self, int port)
+static void port_changed(Key3x4 *self, int port)
 {
 	if (port != self->port_no)
 		return;
@@ -84,7 +86,7 @@ static void port_changed(instance *self, int port)
 	key_update_port(self);
 }
 
-static void keyboard_pressed(GtkWidget *button, instance *self)
+static void keyboard_pressed(GtkWidget *button, Key3x4 *self)
 {
 	int i;
 	for(i=0; i<12; i++)
@@ -94,7 +96,7 @@ static void keyboard_pressed(GtkWidget *button, instance *self)
 	self->map[i]=1;	
 	key_update_port(self);
 }
-static void keyboard_released(GtkWidget *button, instance *self)
+static void keyboard_released(GtkWidget *button, Key3x4 *self)
 {
 	int i;
 	for(i=0; i<12; i++)
@@ -106,7 +108,7 @@ static void keyboard_released(GtkWidget *button, instance *self)
 }
 
 
-int keyboard_init(instance *self)
+int keyboard_init(Key3x4 *self)
 {
 	int i;
 
@@ -114,6 +116,8 @@ int keyboard_init(instance *self)
 	GtkWidget *selector;
 	GtkWidget *table;
 	GtkWidget *button;
+
+	watch_port(self, self->port_no);
 
 	vbox=gtk_vbox_new(FALSE, 2);
 	selector=h_port_selector_new();
@@ -154,21 +158,26 @@ int keyboard_init(instance *self)
 }
 
 
-int keyboard_exit(instance *self, const char *str)
+int keyboard_exit(Key3x4 *self, const char *str)
 {
 	printf("[kb3x4:%d] exiting because of %s\n", self->id, str);
 
+	unwatch_port(self, self->port_no);
 	gui_remove(self->window);
 	return 0;
 }
 
 
 
-module_info_t module_info={
-	"Keyboard",
-	M_SPACE_SIZE	(sizeof(instance)),
-	M_INIT		(keyboard_init),
-	M_EXIT		(keyboard_exit),
-	M_PORT_CHANGED	(port_changed),
+module_info_t modules[]=
+{
+	{ "Keyboard 3x4 buttons",
+		M_SPACE_SIZE	(sizeof(Key3x4)),
+		M_INIT		(keyboard_init),
+		M_EXIT		(keyboard_exit),
+		M_PORT_CHANGED	(port_changed),
+		M_RESET		(NULL),
+	},
+	{ NULL }
 };
 

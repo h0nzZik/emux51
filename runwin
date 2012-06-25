@@ -1,0 +1,2 @@
+#!/bin/sh
+wine out/windows/emux51.exe --module_directory=out/windows/emux51-modules

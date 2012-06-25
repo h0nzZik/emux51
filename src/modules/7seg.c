@@ -10,9 +10,9 @@ typedef struct {
 	GtkWidget *sseg;
 	int port_no;
 	int invert;
-} instance;
+} Display7seg;
 
-void import_segments(instance *self)
+void import_segments(Display7seg *self)
 {
 	char segments;
 	read_port(self, self->port_no, &segments);
@@ -23,7 +23,7 @@ void import_segments(instance *self)
 	
 }
 
-void module_read(instance *self, int port)
+void module_read(Display7seg *self, int port)
 {
 	if (port != self->port_no)
 		return;
@@ -31,14 +31,16 @@ void module_read(instance *self, int port)
 }
 
 
-static void port_select(PortSelector *ps, instance *self)
+static void port_select(PortSelector *ps, Display7seg *self)
 {
+	unwatch_port(self, self->port_no);
 	self->port_no=port_selector_get_port(ps);
+	watch_port(self, self->port_no);
 	import_segments(self);
 }
 
 
-void *module_init(instance *self)
+void *module_init(Display7seg *self)
 {
 	/*	init module	*/
 	GtkWidget *select;
@@ -47,6 +49,7 @@ void *module_init(instance *self)
 
 	self->invert=1;
 
+	watch_port(self, 0);
 
 	vbox=gtk_hbox_new(FALSE, 0);
 	ibox=gtk_vbox_new(FALSE, 0);
@@ -66,16 +69,21 @@ void *module_init(instance *self)
 
 	return 0;
 }
-void module_exit(instance *self, const char *str)
+void module_exit(Display7seg *self, const char *str)
 {
 	printf("[7seg:%d]\texiting because of %s\n",self->id, str);
+	unwatch_port(self, self->port_no);
 	gui_remove(self->window);
 }
 
-module_info_t module_info={
-	"7 segmented display",
-	M_SPACE_SIZE	(sizeof(instance)),
-	M_INIT		(module_init),
-	M_EXIT		(module_exit),
-	M_PORT_CHANGED	(module_read),
+module_info_t modules[]=
+{
+	{ "7 segmented display",
+		M_SPACE_SIZE	(sizeof(Display7seg)),
+		M_INIT		(module_init),
+		M_EXIT		(module_exit),
+		M_PORT_CHANGED	(module_read),
+		M_RESET		(NULL),
+	},
+	{ NULL }
 };

@@ -54,6 +54,24 @@ long long cycle_counter=0;
 unsigned long Fosc=12000000;
 
 
+#ifndef MODULE_DIR
+	#define MODULE_DIR NULL
+#endif
+#ifndef UI_FILE
+	#define UI_FILE "emux51.glade"
+#endif
+
+char *module_directory=MODULE_DIR;
+char *ui_file=UI_FILE;
+
+static GOptionEntry option_entries[]=
+{
+	{ "module_directory", 0, 0, G_OPTION_ARG_FILENAME, &module_directory,
+		"", "/path/to/emux51-modules" },
+	{ "ui_file", 0, 0, G_OPTION_ARG_FILENAME, &ui_file,
+		"", "emux51.glade"},
+	{ NULL }
+};
 
 
 void export_all(void)
@@ -688,23 +706,27 @@ void sigint_handler(int data)
 	exit(0);
 }
 
+
 int main(int argc, char *argv[])
 {
+	GOptionContext *ctx;
+	GError *err=NULL;
 	printf("[emux]\tstarting..\n");
 	
 	if (g_module_supported() == FALSE) {
 		printf("[emux51]\tWarning: GModule is not supported on this system.\n");
 	}
 
-	g_set_application_name("EmuX51");
-	printf("argv[0]: %s\n", argv[0]);
-	printf( "appname: %s\n"
-		"prgname: %s\n"
-		"usernme: %s\n",
-		g_get_application_name(),
-		g_get_prgname(),
-		g_get_user_name());
+	g_set_application_name("Emux51");
 
+	/*	parse command-line arguments	*/
+	ctx=g_option_context_new(NULL);
+	g_option_context_add_main_entries(ctx, option_entries, NULL);
+	g_option_context_add_group(ctx, gtk_get_option_group(TRUE));
+	if (g_option_context_parse(ctx, &argc, &argv, &err) == 0) {
+		g_print("[emux51]\toption parsing failed: %s\n", err->message);
+		exit(1);
+	}
 	srand(time(NULL));
 	config_parse();
 	signal(SIGINT, sigint_handler);
