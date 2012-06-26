@@ -1,6 +1,7 @@
 # Makefile for linux and linux to windows cross-compiling
 
 PROGRAM=emux51
+VERSION=0.3.1
 
 ifndef PREFIX
 	PREFIX=/usr
@@ -185,16 +186,31 @@ install:
 	mkdir -p ${BIN_PATH}
 	mkdir -p ${LIB_PATH}/emux51-modules
 	mkdir -p ${DATA_PATH}/emux51
+	mkdir -p ${DATA_PATH}/applications
 	cp ${DATA_FILES} ${DATA_PATH}/emux51
 #	cp emux51.glade ${DATA_PATH}
 #	cp emux51.png ${DATA_PATH}
 	cp ${OUT} ${BIN_PATH}
 	cp ${OUTDIR}/libemux_widgets${SHARED_EXT} ${LIB_PATH}
 	cp -R ${OUTDIR}/emux51-modules/ ${LIB_PATH}
+	cp emux51.desktop ${DATA_PATH}/applications
 
 uninstall:
 	rm -r ${LIB_PATH}/emux51-modules
 	rm -r ${DATA_PATH}/emux51
 	rm ${LIB_PATH}/libemux_widgets${SHARED_EXT}
 	rm ${BIN_PATH}/emux51
+	rm ${DATA_PATH}/applications/emux51.desktop
+
+PKGDIR=emux51-${VERSION}
+package:
+	rm -rf ${PKGDIR}
+	mkdir -p ${PKGDIR}
+	cp -R src/ ${PKGDIR}
+	cp -R include/ ${PKGDIR}
+	cp emux51.png emux51.glade emux51.desktop ${PKGDIR}
+	cp Makefile README gpl-3.0.txt ${PKGDIR}
+	cp run runwin ${PKGDIR}
+	tar -czf ${PKGDIR}.tar.gz ${PKGDIR}
+	rm -rf ${PKGDIR}
 

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Emux51 Simulator
+Comment=Simple and modular MCU 8051 Simulator
+Exec=emux51
+Terminal=false
+Icon=/usr/share/emux51/emux51.png
+Categories=Development;Education
+Type=Application
+
+
