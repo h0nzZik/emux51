@@ -13,24 +13,26 @@
 typedef struct {
 	module_base_t base;
 	int port_no;
-	char lighting_segments[3];
-	int history[3];
-	GtkWidget *window;
-	GtkWidget *ssegs[3];
+	GtkWidget *parent;
+
+	int display;
+	char lighting_segments[4];
+	int history[4];
+	GtkWidget *ssegs[4];
 	int mask;
 	void *event;
-} Display3x7seg;
+} DynamicDisplay;
 
 
 
 
-void off_handler(Display3x7seg *self, void *data)
+void off_handler(DynamicDisplay *self, void *data)
 {
 	int i;
-	for(i=0; i<3; i++){
+	for(i=0; i<self->display; i++){
 		if ((self->mask>>i)&1 && self->lighting_segments[i] && !self->history[i]){
-			self->lighting_segments[i]=0;		
-			seven_seg_set_segments(self->ssegs[2-i], 0);
+			self->lighting_segments[i]=0;
+			seven_seg_set_segments(self->ssegs[self->display-1-i], 0);
 		}
 		else {
 			self->history[i]=0;	
@@ -45,7 +47,7 @@ void off_handler(Display3x7seg *self, void *data)
 /*	inverted decode array	*/
 const char decode_arr[16]={0x40, 0x79, 0x24, 0x30, 0x19, 0x12, 0x02,
 		0x78, 0x00, 0x10, 0x08, 0x03, 0x46, 0x21, 0x06, 0x0E};
-void import_segments(Display3x7seg *self)
+void import_segments(DynamicDisplay *self)
 {
 	char data;
 	int value;
@@ -58,11 +60,11 @@ void import_segments(Display3x7seg *self)
 	mask=data>>4;
 	light=~decode_arr[value];
 
-	for (i=0; i<3; i++) {
+	for (i=0; i<self->display; i++) {
 		/*	light	*/
 		if (((mask>>i)&1) == 0) {
 			if (self->lighting_segments[i]!=light) {
-				seven_seg_set_segments(self->ssegs[2-i], light);
+				seven_seg_set_segments(self->ssegs[self->display-1-i], light);
 				self->lighting_segments[i]=light;
 			}
 			self->history[i]=1;
@@ -70,18 +72,12 @@ void import_segments(Display3x7seg *self)
 	}
 	self->mask=mask;
 }
-void module_read(Display3x7seg *self, int port)
-{
-	if (port != self->port_no) {
-		return;
-	}
-	import_segments(self);
-}
 
-int module_reset(Display3x7seg *self)
+
+int dynamic_display_reset(DynamicDisplay *self)
 {
 	int i;
-	for (i=0; i<3; i++) {
+	for (i=0; i<self->display; i++) {
 		seven_seg_set_segments(self->ssegs[i], 0);
 		self->lighting_segments[i]=0x00;
 		self->history[i]=0;
@@ -94,28 +90,33 @@ int module_reset(Display3x7seg *self)
 }
 
 
-/*	handler of "port-select" signal	*/
-static void port_select(PortSelector *ps, Display3x7seg *self)
+
+void dynamic_display_read(DynamicDisplay *self, int port)
 {
-	int i;
+	if (port != self->port_no)
+		return;
+	import_segments(self);
+}
+
+/*	handler of "port-select" signal	*/
+static void port_select(PortSelector *ps, DynamicDisplay *self)
+{
 	unwatch_port(self, self->port_no);
 	self->port_no=port_selector_get_port(ps);
 	watch_port(self, self->port_no);
-	module_reset(self);
+	dynamic_display_reset(self);
+
 	/*	redraw	*/
 	import_segments(self);
 }
 
-
-int module_init(Display3x7seg *self)
+int dynamic_display_new(DynamicDisplay *self)
 {
-	/*	init module	*/
 	int i;
 
 	GtkWidget *hbox;
 	GtkWidget *select;
 
-	GtkWidget *tmpbox;
 	self->mask=0xFF;
 
 
@@ -126,43 +127,67 @@ int module_init(Display3x7seg *self)
 	g_signal_connect(select, "port-select",
 			G_CALLBACK(port_select), self);
 	gtk_box_pack_start(GTK_BOX(hbox), select, FALSE, FALSE, 0);
+
 	watch_port(self, 0);
 
-	for(i=0; i<3; i++) {
+	for(i=0; i<self->display; i++) {
 		self->ssegs[i]=seven_seg_new();
 		gtk_box_pack_start(GTK_BOX(hbox), self->ssegs[i], FALSE, FALSE, 5);
-
 	}
 
-	/*	allocate timer event	*/
 	self->event=timer_event_alloc(self, M_QUEUE(off_handler), NULL);
 	if (self->event == NULL) {
 		return 1;
 	}
 	sync_timer_add(self->event, 40);
-
+	
 	gtk_widget_show_all(hbox);
-	self->window=gui_add(hbox, self, "3x7seg panel");
+	self->parent=gui_add(hbox, self, "Dynamic Display");
+	return 0;
+
+}
+
+int dynamic_display_init_3x7(DynamicDisplay *self)
+{
+	self->display=3;
+	dynamic_display_new(self);
 	return 0;
 }
-int module_exit(Display3x7seg *self, const char *str)
+
+int dynamic_display_init_4x7(DynamicDisplay *self)
 {
-	printf("[3x7seg:%d]\texiting because of %s\n", *(int *)self, str);
+	self->display=4;
+	return (dynamic_display_new(self));
+}
+
+int dynamic_display_exit(DynamicDisplay *self, const char *str)
+{
+
+	printf("[DynamicDisplay:%d]\texit: %s\n", *(int *)self, str);
+
 	sync_timer_unlink(self->event);
 	g_free(self->event);
-	unwatch_port(self, self->port_no);
-	gui_remove(self->window);
+	unwatch_port(self, self->port_no);	
+	gui_remove(self->parent);
 	return 0;
 }
 
 module_info_t modules[]=
 {
-	{"3x7seg panel",
-		M_SPACE_SIZE	(sizeof(Display3x7seg)),
-		M_INIT		(module_init),
-		M_EXIT		(module_exit),
-		M_PORT_CHANGED	(module_read),
-		M_RESET		(module_reset),
+	{ "Dynamic Display 4x7segments",
+		M_SPACE_SIZE	(sizeof(DynamicDisplay)),
+		M_INIT		(dynamic_display_init_4x7),
+		M_EXIT		(dynamic_display_exit),
+		M_PORT_CHANGED	(dynamic_display_read),
+		M_RESET		(dynamic_display_reset),
+	},
+	{ "Dynamic Display 3x7segments",
+		M_SPACE_SIZE	(sizeof(DynamicDisplay)),
+		M_INIT		(dynamic_display_init_3x7),
+		M_EXIT		(dynamic_display_exit),
+		M_PORT_CHANGED	(dynamic_display_read),
+		M_RESET		(dynamic_display_reset),
 	},
 	{ NULL }
 };
+

@@ -127,15 +127,14 @@ widgeto		= ${OBJ}/port_selector.o	\
 		  ${OBJ}/7seg.o			\
 		  ${OBJ}/led.o
 
-modules		= 3x7seg.mod			\
-		  7seg.mod			\
+modules		= 7seg.mod			\
 		  led.mod			\
 		  switch.mod			\
-		  4x7seg.mod			\
 		  8x7seg.mod			\
 		  keyboard.mod			\
 		  5x7matrix.mod			\
-		  5x7matrix-degraded.mod
+		  5x7matrix-degraded.mod	\
+		  dynamic_display.mod
 
 #	Rules
 
