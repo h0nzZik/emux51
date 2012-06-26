@@ -45,8 +45,8 @@
 *	* Incremental rotary encoder module
 
 *	Instalation:
-$	make GLADE_FILE=/usr/share/emux51/emux.glade
-$	make INSTALL_PREFIX=/usr install
+$	make
+$	make install
 
 
 
