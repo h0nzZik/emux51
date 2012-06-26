@@ -1,2 +1,2 @@
 #!/bin/sh
-env LD_LIBRARY_PATH=`pwd`/out/nixies out/nixies/emux51 --module_directory=out/nixies/emux51-modules
+env LD_LIBRARY_PATH=`pwd`/out/nixies out/nixies/emux51 --module_directory=out/nixies/emux51-modules --ui_file=emux51.glade

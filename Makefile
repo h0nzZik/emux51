@@ -19,6 +19,8 @@ ifeq (${arch}, windows)
 	BIN_PATH	= .
 	LIB_PATH	= .
 	DATA_PATH	= .
+	DEF_GLADE_FILE	= ${DATA_PATH}/emux51.glade
+
 else
 	arch		= nixies
 	BPREFIX		=
@@ -32,11 +34,16 @@ else
 	BIN_PATH	= ${PREFIX}/bin
 	LIB_PATH	= ${PREFIX}/lib
 	DATA_PATH	= ${PREFIX}/share
-endif
+	DEF_GLADE_FILE	= ${DATA_PATH}/emux51/emux51.glade
 
-ifndef (${GLADE_FILE})
-	GLADE_FILE=emux51.glade
 endif
+#
+#ifndef (${GLADE_FILE})
+#	GLADE_FILE=emux51.glade
+#endif
+#
+	
+DATA_FILES	= emux51.glade emux51.png
 
 
 MODULE_PATH	= ${LIB_PATH}/emux51-modules
@@ -55,12 +62,12 @@ GTK_NEW_DEFINES	= -D GTK_DISABLE_SINGLE_INCLUDES	\
 		  -D GDK_DISABLE_DEPRECATED		\
 		  -D GTK_DISABLE_DEPRECATED
 
-DEFINES		= -D MODULE_EXTENSION=\"${SHARED_EXT}\"		\
-		  -D HOME_VAR=\"${HOME_VAR}\"			\
+DEFINES		= -D MODULE_EXTENSION=\"${SHARED_EXT}\"	\
+		  -D HOME_VAR=\"${HOME_VAR}\"		\
 		  -D MODULE_REGEX=\"${MODULE_REGEX}\"	\
-		  -D UI_FILE=\"${GLADE_FILE}\"	\
-		  -D MODULE_DIR=\"${MODULE_PATH}\"		\
-		  ${GTK_NEW_DEFINES}				\
+		  -D UI_FILE=\"${DEF_GLADE_FILE}\"	\
+		  -D MODULE_DIR=\"${MODULE_PATH}\"	\
+		  ${GTK_NEW_DEFINES}			\
 		  ${DEBUG_DEFINES}
 
 INCLUDE		= -I include
@@ -172,17 +179,18 @@ clean:
 	rm -f ${OBJ}/modules/*.o
 	rm -f ${OUT}
 	rm -f ${OUTDIR}/libemux_widgets${SHARED_EXT}
-	rm -f ${OUTDIR}/modules/*${SHARED_EXT}
+	rm -f ${OUTDIR}/emux51-modules/*${SHARED_EXT}
 
 install:
 	mkdir -p ${BIN_PATH}
 	mkdir -p ${LIB_PATH}/emux51-modules
 	mkdir -p ${DATA_PATH}/emux51
-	cp emux.glade ${DATA_PATH}/emux51
-	cp emux51.png ${DATA_PATH}/emux51
+	cp ${DATA_FILES} ${DATA_PATH}/emux51
+#	cp emux51.glade ${DATA_PATH}
+#	cp emux51.png ${DATA_PATH}
 	cp ${OUT} ${BIN_PATH}
 	cp ${OUTDIR}/libemux_widgets${SHARED_EXT} ${LIB_PATH}
-	cp -R ${OUTDIR}/modules/ ${LIB_PATH}/emux51-modules
+	cp -R ${OUTDIR}/emux51-modules/ ${LIB_PATH}
 
 uninstall:
 	rm -r ${LIB_PATH}/emux51-modules
