@@ -1,7 +1,7 @@
 # Makefile for linux and linux to windows cross-compiling
 
 PROGRAM=emux51
-VERSION=0.3.1
+VERSION=0.4
 
 ifndef PREFIX
 	PREFIX=/usr
@@ -208,7 +208,7 @@ package:
 	cp -R src/ ${PKGDIR}
 	cp -R include/ ${PKGDIR}
 	cp emux51.png emux51.glade emux51.desktop ${PKGDIR}
-	cp Makefile README gpl-3.0.txt ${PKGDIR}
+	cp Makefile README COPYING ${PKGDIR}
 	cp run runwin ${PKGDIR}
 	tar -czf ${PKGDIR}.tar.gz ${PKGDIR}
 	rm -rf ${PKGDIR}
